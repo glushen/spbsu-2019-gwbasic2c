@@ -14,6 +14,8 @@ void handleResult(std::vector<Line*>* line_list);
 
 %union {
     int i;
+    float f;
+    double d;
     std::string* s;
     std::vector<Line*>* line_list;
     Line* line;
@@ -21,8 +23,12 @@ void handleResult(std::vector<Line*>* line_list);
     Statement* statement;
 }
 
-%token <i> INTEGER
 %token <s> SOME_STRING
+
+%token <i> INT_CONST
+%token <f> FLOAT_CONST
+%token <d> DOUBLE_CONST
+%token <s> STRING_CONST
 %token END_OF_FILE
 
 %type <i> LINE_NUMBER
@@ -46,7 +52,7 @@ LINE:
 |   LINE_NUMBER STATEMENT_LIST COMMENT { $$ = new Line($1, $2, $3); };
 
 LINE_NUMBER:
-    INTEGER { $$ = $1; };
+    INT_CONST { $$ = $1; };
 
 STATEMENT_LIST:
     %empty                   { $$ = new std::vector<Statement*>(); }
