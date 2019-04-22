@@ -29,6 +29,7 @@ void handleResult(std::vector<Line*>* line_list);
 %token <f> FLOAT_CONST
 %token <d> DOUBLE_CONST
 %token <s> STRING_CONST
+%token <s> INT_VAR FLOAT_VAR DOUBLE_VAR STRING_VAR FN_VAR
 %token END_OF_FILE
 
 %type <i> LINE_NUMBER

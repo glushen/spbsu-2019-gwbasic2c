@@ -5,8 +5,12 @@
 %}
 
 NUM_WITH_DOT    (\-?[0-9]*([0-9]\.|\.[0-9])[0-9]*)
+FN_NAME         ([Ff][Nn][a-zA-Z0-9\.]*)
+VAR_NAME        ([a-zA-Z][a-zA-Z0-9\.]*)
 
 %%
+
+[a-zA-Z]+       { yylval.s = new std::string(yytext); return SOME_STRING; }
 
 \"[^\"]*\"      { yylval.s = new std::string(yytext, 1, yyleng-2); return STRING_CONST; }
 \-?[0-9]{1,7}   {
@@ -48,11 +52,17 @@ NUM_WITH_DOT    (\-?[0-9]*([0-9]\.|\.[0-9])[0-9]*)
 &[0-9a-fA-F]{1,7}  { yylval.f = (float) strtol(yytext+1, nullptr, 8); return FLOAT_CONST; }
 &[0-9a-fA-F]{8,}   { yylval.d = (double) strtoll(yytext+1, nullptr, 8); return DOUBLE_CONST; }
 
+{FN_NAME}       { yylval.s = new std::string(yytext, yyleng); return FN_VAR; }
+{VAR_NAME}      { yylval.s = new std::string(yytext, yyleng); return FLOAT_VAR; }
+{VAR_NAME}\!    { yylval.s = new std::string(yytext, yyleng-1); return FLOAT_VAR; }
+{VAR_NAME}\%    { yylval.s = new std::string(yytext, yyleng-1); return INT_VAR; }
+{VAR_NAME}\#    { yylval.s = new std::string(yytext, yyleng-1); return DOUBLE_VAR; }
+{VAR_NAME}\$    { yylval.s = new std::string(yytext, yyleng-1); return STRING_VAR; }
+
 [ \t]           { /* ignore */ }
 \r\n|\r|\n      { return '\n'; }
 \:|\'           { return yytext[0]; }
-[a-zA-Z]+       { yylval.s = new std::string(yytext); return SOME_STRING; }
-.               { yyerror("Mystery character %c", yytext[0]); }
 <<EOF>>         { return END_OF_FILE; }
+.               { yyerror("Mystery character %c", yytext[0]); }
 
 %%
