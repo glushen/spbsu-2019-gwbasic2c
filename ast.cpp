@@ -3,21 +3,21 @@
 #include <vector>
 
 struct Statement {
-    std::string* statement;
+    char* statement;
 
-    explicit Statement(std::string* statement): statement(statement) { }
+    explicit Statement(char* statement): statement(statement) { }
 
     void print() {
-        std::cout << *statement;
+        std::cout << statement;
     }
 };
 
 struct Line {
     int line_number;
     std::vector<Statement*>* statement_list;
-    std::string* comment;
+    char* comment;
 
-    Line(int line_number, std::vector<Statement*>* statement_list, std::string* comment):
+    Line(int line_number, std::vector<Statement*>* statement_list, char* comment):
         line_number(line_number), statement_list(statement_list), comment(comment) { }
 
     void print() {
@@ -31,7 +31,7 @@ struct Line {
             }
             statement->print();
         }
-        std::cout << " '" << *comment;
+        std::cout << " '" << comment;
     }
 };
 
@@ -102,4 +102,15 @@ class BinaryNumOp: public NumExp {
 public:
     BinaryNumOp(const char* name, NumExp* left_operand, NumExp* right_operand):
         name(name), left_operand(left_operand), right_operand(right_operand) { }
+};
+
+class StringExp {
+protected:
+    virtual ~StringExp() = default;
+};
+
+class StringConst: public StringExp {
+    char* value;
+public:
+    explicit StringConst(char* value): value(value) { }
 };
