@@ -11,4 +11,4 @@ bison_target(parser parser.y ${CMAKE_CURRENT_BINARY_DIR}/parser.cpp DEFINES_FILE
 flex_target(lexer lexer.l  ${CMAKE_CURRENT_BINARY_DIR}/lexer.cpp)
 add_flex_bison_dependency(lexer parser)
 
-add_executable(gwbasic2c main.cpp ${BISON_parser_OUTPUTS} ${FLEX_lexer_OUTPUTS})
+add_executable(gwbasic2c main.cpp ast.cpp ${BISON_parser_OUTPUTS} ${FLEX_lexer_OUTPUTS})
