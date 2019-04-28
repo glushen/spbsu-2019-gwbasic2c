@@ -12,3 +12,8 @@ flex_target(lexer lexer.l  ${CMAKE_CURRENT_BINARY_DIR}/lexer.cpp)
 add_flex_bison_dependency(lexer parser)
 
 add_executable(gwbasic2c main.cpp ast.cpp ${BISON_parser_OUTPUTS} ${FLEX_lexer_OUTPUTS})
+
+AUX_SOURCE_DIRECTORY(gw_logic GW_LOGIC)
+add_library(gw_logic ${GW_LOGIC})
+
+target_link_libraries(gw_logic m)

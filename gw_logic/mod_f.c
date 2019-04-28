@@ -1,0 +1,6 @@
+#include "cint_f.c"
+gw_int mod_f(float a, float b) {
+    gw_int a_i = cint_f(a), b_i = cint_f(b);
+    assert(b_i != 0, DIVISION_BY_ZERO);
+    return a_i % b_i;
+}
