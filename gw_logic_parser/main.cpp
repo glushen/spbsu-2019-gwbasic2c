@@ -5,6 +5,7 @@
 #include <cstring>
 #include <regex>
 #include <fstream>
+#include <algorithm>
 #include <gw_logic_parser.h>
 #include "main.h"
 #include "util.h"
@@ -20,7 +21,7 @@ const regex GW_FUNCTION_NAME_REGEX(R"(([^_]+)(?:_.*)?)");
 
 map<string, CoreFileData> CORE_FILES_DATA;
 map<string, LogicFileData> LOGIC_FILES_DATA;
-map<string, vector<string>> LOGIC_FILES_BY_FUNCTION_NAME;
+map<string, vector<string>> LOGIC_FILES_BY_GW_FUNCTION_NAME;
 
 FILE* OPENED_LOGIC_FILE;
 string OPENED_LOGIC_FILE_PATH;
@@ -70,6 +71,40 @@ void manage_logic_file(const char* filename) {
     }
 }
 
+bool gw_types_comparator(const string &a, const string &b) {
+    return (a == "INT" && (b == "FLOAT" || b == "DOUBLE"))
+        || (a == "FLOAT" && b == "DOUBLE");
+}
+
+void save_logic_file_by_gw_function_name(const string& gw_function_name,
+                                         const string& new_logic_filename,
+                                         const LogicFileData& new_data) {
+    auto& data_list = LOGIC_FILES_BY_GW_FUNCTION_NAME[gw_function_name];
+
+    int insert_index = 0;
+
+    for (auto& logic_filename : data_list) {
+        auto& current_data = LOGIC_FILES_DATA[logic_filename];
+
+        if (current_data.argument_type_list.size() == new_data.argument_type_list.size()) {
+            bool new_is_less = lexicographical_compare(
+                    new_data.argument_type_list.begin(),
+                    new_data.argument_type_list.end(),
+                    current_data.argument_type_list.begin(),
+                    current_data.argument_type_list.end(),
+                    gw_types_comparator);
+
+            if (new_is_less) {
+                break;
+            }
+        }
+
+        insert_index++;
+    }
+
+    data_list.insert(data_list.begin() + insert_index, new_logic_filename);
+}
+
 void handle_function_signature(LogicFileData&& data) {
     fclose(OPENED_LOGIC_FILE);
 
@@ -93,11 +128,13 @@ void handle_function_signature(LogicFileData&& data) {
     }
 
     fin.close();
-    LOGIC_FILES_DATA[filename_by_path(OPENED_LOGIC_FILE_PATH)] = data;
 
-    smatch function_name_match;
-    regex_match(data.function_name, function_name_match, GW_FUNCTION_NAME_REGEX);
-    LOGIC_FILES_BY_FUNCTION_NAME[function_name_match[1]].push_back(filename_by_path(OPENED_LOGIC_FILE_PATH));
+    auto filename = filename_by_path(OPENED_LOGIC_FILE_PATH);
+    LOGIC_FILES_DATA[filename] = data;
+
+    smatch gw_function_name_match;
+    regex_match(data.function_name, gw_function_name_match, GW_FUNCTION_NAME_REGEX);
+    save_logic_file_by_gw_function_name(gw_function_name_match[1], filename, data);
 }
 
 void print_core_file(const string& name) {
@@ -265,10 +302,10 @@ namespace gw_logic {
 
     cout << endl;
 
-    cout << "    map<string, vector<LogicFile*>> LOGIC_FILES_BY_FUNCTION_NAME = {" << endl;
+    cout << "    map<string, vector<LogicFile*>> LOGIC_FILES_BY_GW_FUNCTION_NAME = {" << endl;
 
     int first = true;
-    for (auto& name_and_filenames : LOGIC_FILES_BY_FUNCTION_NAME) {
+    for (auto& name_and_filenames : LOGIC_FILES_BY_GW_FUNCTION_NAME) {
         if (first) {
             first = false;
         } else {
