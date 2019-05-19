@@ -148,7 +148,7 @@ void print_core_file(const string& name) {
         print_core_file(filename_by_path(path));
     }
 
-    cout << "    CoreFile core_" << name << " = { ";
+    cout << "    const CoreFile core_" << name << " = { ";
     cout << "\"" << name << "\", ";
 
     cout << "{ ";
@@ -187,7 +187,7 @@ void print_logic_file(const string& name) {
         }
     }
 
-    cout << "    LogicFile " << name << " = { ";
+    cout << "    const LogicFile " << name << " = { ";
     cout << "\"" << data.function_name << "\", ";
 
     cout << "{ ";
@@ -275,14 +275,14 @@ namespace gw_logic {
 
     struct CoreFile {
         string name;
-        vector<CoreFile*> core_dependencies;
+        vector<const CoreFile*> core_dependencies;
         string code;
     };
 
     struct LogicFile {
         string name;
-        vector<CoreFile*> core_dependencies;
-        vector<LogicFile*> logic_dependencies;
+        vector<const CoreFile*> core_dependencies;
+        vector<const LogicFile*> logic_dependencies;
         Type return_type;
         vector<Type> argument_type_list;
         string code;
@@ -302,7 +302,7 @@ namespace gw_logic {
 
     cout << endl;
 
-    cout << "    map<string, vector<LogicFile*>> LOGIC_FILES_BY_GW_FUNCTION_NAME = {" << endl;
+    cout << "    const map<string, vector<const LogicFile*>> LOGIC_FILES_BY_GW_FUNCTION_NAME = {" << endl;
 
     int first = true;
     for (auto& name_and_filenames : LOGIC_FILES_BY_GW_FUNCTION_NAME) {
