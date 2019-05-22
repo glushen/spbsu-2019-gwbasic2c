@@ -52,7 +52,7 @@ void manage_core_file(const char* path) {
     }
 
     fin.close();
-    CORE_FILES_DATA[filename_by_path(path)] = data;
+    CORE_FILES_DATA[util::filename_by_path(path)] = data;
 }
 
 void manage_logic_file(const char* filename) {
@@ -129,7 +129,7 @@ void handle_function_signature(LogicFileData&& data) {
 
     fin.close();
 
-    auto filename = filename_by_path(OPENED_LOGIC_FILE_PATH);
+    auto filename = util::filename_by_path(OPENED_LOGIC_FILE_PATH);
     LOGIC_FILES_DATA[filename] = data;
 
     smatch gw_function_name_match;
@@ -145,7 +145,7 @@ void print_core_file(const string& name) {
     auto& data = CORE_FILES_DATA[name];
 
     for (auto& path : data.include_path_list) {
-        print_core_file(filename_by_path(path));
+        print_core_file(util::filename_by_path(path));
     }
 
     cout << "    const CoreFile core_" << name << " = { ";
@@ -159,11 +159,11 @@ void print_core_file(const string& name) {
         } else {
             cout << ", ";
         }
-        cout << "&core_" << filename_by_path(path);
+        cout << "&core_" << util::filename_by_path(path);
     }
     cout << " }, ";
 
-    cout << "\"" << escape(data.generated_code) << "\"";
+    cout << "\"" << util::escape(data.generated_code) << "\"";
     cout << " };" << endl;
 }
 
@@ -179,9 +179,9 @@ void print_logic_file(const string& name) {
 
     for (auto& path : data.include_path_list) {
         if (regex_match(path, CORE_INCLUDE_REGEX)) {
-            core_dependencies.push_back(filename_by_path(path));
+            core_dependencies.push_back(util::filename_by_path(path));
         } else {
-            string filename = filename_by_path(path);
+            string filename = util::filename_by_path(path);
             print_logic_file(filename);
             logic_dependencies.push_back(filename);
         }
@@ -210,7 +210,7 @@ void print_logic_file(const string& name) {
         } else {
             cout << ", ";
         }
-        cout << '&' << filename_by_path(path);
+        cout << '&' << util::filename_by_path(path);
     }
     cout << " }, ";
 
@@ -228,7 +228,7 @@ void print_logic_file(const string& name) {
     }
     cout << " }, ";
 
-    cout << "\"" << escape(data.generated_code) << "\"";
+    cout << "\"" << util::escape(data.generated_code) << "\"";
     cout << " };" << endl;
 }
 
@@ -263,28 +263,30 @@ int main(int count, char* arguments[]) {
         exit(EXIT_FAILURE);
     }
 
-    cout << R"(#include <map>
+    cout << R"(#pragma once
+#include <map>
 #include <vector>
 #include <string>
-using std::map, std::vector, std::string;
 
 namespace gw_logic {
+    using std::map, std::vector, std::string;
+
     enum Type {
         INT, FLOAT, DOUBLE, STRING, INT_PTR, FLOAT_PTR, DOUBLE_PTR, STRING_PTR, VOID
     };
 
     struct CoreFile {
         string name;
-        vector<const CoreFile*> core_dependencies;
+        vector<const CoreFile*> coreDependencyList;
         string code;
     };
 
     struct LogicFile {
         string name;
-        vector<const CoreFile*> core_dependencies;
-        vector<const LogicFile*> logic_dependencies;
-        Type return_type;
-        vector<Type> argument_type_list;
+        vector<const CoreFile*> coreDependencyList;
+        vector<const LogicFile*> logicDependencyList;
+        Type returnType;
+        vector<Type> argumentTypeList;
         string code;
     };
 

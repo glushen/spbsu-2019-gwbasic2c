@@ -1,8 +1,9 @@
+#include <cstdarg>
 #include "util.h"
 
 using std::string;
 
-string filename_by_path(const string& path) {
+string util::filename_by_path(const string& path) {
     int slash_index = path.find_last_of("/\\");
     int substr_start = (slash_index != string::npos ? slash_index + 1 : 0);
     int dot_index = path.find_last_of('.');
@@ -10,7 +11,7 @@ string filename_by_path(const string& path) {
     return path.substr(substr_start, substr_end - substr_start);
 }
 
-string escape(const string& str) {
+string util::escape(const string& str) {
     string result;
     result.reserve(str.size());
 
@@ -35,4 +36,15 @@ string escape(const string& str) {
     }
 
     return result;
+}
+
+string util::to_string(const char* format, ...) {
+    va_list arguments;
+    va_start(arguments, format);
+    int length = vsnprintf(nullptr, 0, format, arguments);
+    char* result_chars = new char[length];
+    vsprintf(result_chars, format, arguments);
+    string result_string(result_chars, length);
+    delete[] result_chars;
+    return result_string;
 }

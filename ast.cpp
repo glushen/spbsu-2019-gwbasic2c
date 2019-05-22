@@ -1,116 +1,113 @@
-#include <string>
-#include <iostream>
-#include <vector>
+#include "ast.h"
+#include <cassert>
+#include "util.h"
 
-struct Statement {
-    char* statement;
+using namespace std;
+using namespace gw_logic;
 
-    explicit Statement(char* statement): statement(statement) { }
+ast::Printable::~Printable() = default;
 
-    void print() {
-        std::cout << statement;
-    }
-};
+ast::Expression::Expression(Type type):
+        type(type) { }
 
-struct Line {
-    int line_number;
-    std::vector<Statement*>* statement_list;
-    char* comment;
+ast::ConstExpression::ConstExpression(gw_logic::Type type, std::string&& valueToPrint):
+        Expression(type),
+        valueToPrint(valueToPrint) { }
 
-    Line(int line_number, std::vector<Statement*>* statement_list, char* comment):
-        line_number(line_number), statement_list(statement_list), comment(comment) { }
+void ast::ConstExpression::print(ostream& stream) const {
+    stream << valueToPrint;
+}
 
-    void print() {
-        std::cout << line_number << " ";
-        bool firstPrinted = false;
-        for (auto statement : *statement_list) {
-            if (firstPrinted) {
-                std::cout << " :";
-            } else {
-                firstPrinted = true;
-            }
-            statement->print();
+ast::IntConstExpression::IntConstExpression(short value):
+        ConstExpression(INT, util::to_string("%d", value)) { }
+
+ast::FloatConstExpression::FloatConstExpression(float value):
+        ConstExpression(FLOAT, util::to_string("%.9f", value)) { }
+
+ast::DoubleConstExpression::DoubleConstExpression(double value):
+        ConstExpression(DOUBLE, util::to_string("%.17f", value)) { }
+
+ast::StringConstExpression::StringConstExpression(const std::string& value):
+        ConstExpression(STRING, '"' + util::escape(value) + '"') { }
+
+ast::VariableExpression::VariableExpression(string&& name, Type type):
+        Expression(type),
+        name(name) {
+    assert(type == INT_PTR || type == FLOAT_PTR || type == DOUBLE_PTR || type == STRING_PTR);
+}
+
+void ast::VariableExpression::print(ostream& stream) const {
+    stream << name; // TODO доделать
+}
+
+ast::FunctionExpression::FunctionExpression(const LogicFile* logicFile, vector<const Expression*>&& argumentList):
+        Expression(logicFile->returnType),
+        logicFile(logicFile),
+        argumentList(argumentList) { }
+
+void ast::FunctionExpression::print(ostream& stream) const {
+    stream << logicFile->name << '(';
+    bool first = true;
+    for (auto& argument : argumentList) {
+        if (first) {
+            first = false;
+        } else {
+            stream << ',';
         }
-        std::cout << " '" << comment;
+        argument->print(stream);
     }
-};
+    stream << ')';
+}
 
-class NumExp {
-protected:
-    virtual ~NumExp() = default;
-};
-class IntExp: public NumExp { };
-class FloatExp: public NumExp { };
-class DoubleExp: public NumExp { };
-
-class IntCaster: public IntExp {
-    NumExp* exp;
-    explicit IntCaster(NumExp* exp): exp(exp) { }
-public:
-    static IntExp* cast(NumExp* exp) {
-        auto casted = dynamic_cast<IntExp*>(exp);
-        return casted != nullptr ? casted : new IntCaster(exp);
+ast::FunctionExpression* ast::retrieveFunctionExpression(const string& name, vector<const Expression*>&& argumentList) {
+    if (LOGIC_FILES_BY_GW_FUNCTION_NAME.count(name) == 0) {
+        throw std::invalid_argument("Function " + name + " is not found");
     }
-};
-class FloatCaster: public FloatExp {
-    NumExp* exp;
-    explicit FloatCaster(NumExp* exp): exp(exp) { }
-public:
-    static FloatExp* cast(NumExp* exp) {
-        auto casted = dynamic_cast<FloatExp*>(exp);
-        return casted != nullptr ? casted : new FloatCaster(exp);
+
+    for (auto logicFile: LOGIC_FILES_BY_GW_FUNCTION_NAME.at(name)) {
+        if (logicFile->argumentTypeList.size() != argumentList.size()) {
+            continue;
+        }
+
+        for (int i = 0; i < argumentList.size(); i++) {
+            Type actualType = argumentList[i]->type;
+            Type expectedType = logicFile->argumentTypeList[i];
+
+            bool typeIsCorrect = actualType == expectedType
+                                 || (actualType == INT && (expectedType == FLOAT || expectedType == DOUBLE))
+                                 || (actualType == FLOAT && expectedType == DOUBLE);
+
+            if (typeIsCorrect) {
+                return new FunctionExpression(logicFile, forward<vector<const Expression*>>(argumentList));
+            }
+        }
     }
-};
-class DoubleCaster: public DoubleExp {
-    NumExp* exp;
-    explicit DoubleCaster(NumExp* exp): exp(exp) { }
-public:
-    static DoubleExp* cast(NumExp* exp) {
-        auto casted = dynamic_cast<DoubleExp*>(exp);
-        return casted != nullptr ? casted : new DoubleCaster(exp);
+
+    throw std::invalid_argument("Function " + name + " with required signature is not found");
+}
+
+ast::Statement::Statement(Expression* expression):
+        expression(expression) { }
+
+void ast::Statement::print(ostream& stream) const {
+    expression->print(stream);
+}
+
+ast::Line::Line(int lineNumber, vector<ast::Statement*>* statementList, char* comment):
+        lineNumber(lineNumber),
+        statementList(statementList),
+        comment(comment) { }
+
+void ast::Line::print(ostream& stream) const {
+    stream << lineNumber << " ";
+    bool firstPrinted = false;
+    for (auto statement : *statementList) {
+        if (firstPrinted) {
+            stream << " :";
+        } else {
+            firstPrinted = true;
+        }
+        statement->print(stream);
     }
-};
-
-class IntConst: public IntExp {
-    int value;
-public:
-    explicit IntConst(int value): value(value) { }
-};
-class FloatConst: public FloatExp {
-    float value;
-public:
-    explicit FloatConst(float value): value(value) { }
-};
-class DoubleConst: public DoubleExp {
-    double value;
-public:
-    explicit DoubleConst(double value): value(value) { }
-};
-
-class UnaryNumOp: public NumExp {
-    const char* name;
-    NumExp* operand;
-public:
-    UnaryNumOp(const char* name, NumExp* operand):
-        name(name), operand(operand) { }
-};
-
-class BinaryNumOp: public NumExp {
-    const char* name;
-    NumExp* left_operand;
-    NumExp* right_operand;
-public:
-    BinaryNumOp(const char* name, NumExp* left_operand, NumExp* right_operand):
-        name(name), left_operand(left_operand), right_operand(right_operand) { }
-};
-
-class StringExp {
-protected:
-    virtual ~StringExp() = default;
-};
-
-class StringConst: public StringExp {
-    char* value;
-public:
-    explicit StringConst(char* value): value(value) { }
-};
+    stream << " '" << comment;
+}

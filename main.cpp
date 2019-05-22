@@ -2,6 +2,7 @@
 #include <algorithm>
 
 #include <parser.h>
+#include "ast.h"
 
 int main(int argc, char* argv[]) {
     if (argc > 1) {
@@ -24,18 +25,18 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void print(std::vector<Line*>* lines) {
+void printLines(std::vector<ast::Line*>* lines) {
     for (auto line : *lines) {
-        line->print();
+        line->print(std::cout);
         std::cout << std::endl;
     }
 }
 
-void handleResult(std::vector<Line*>* lines) {
-    std::sort(lines->begin(), lines->end(), [](Line* a, Line* b) {
-        return a->line_number < b->line_number;
+void handleResult(std::vector<ast::Line*>* lines) {
+    std::sort(lines->begin(), lines->end(), [](ast::Line* a, ast::Line* b) {
+        return a->lineNumber < b->lineNumber;
     });
-    print(lines);
+    printLines(lines);
 }
 
 void yyerror(const char *s, ...) {
