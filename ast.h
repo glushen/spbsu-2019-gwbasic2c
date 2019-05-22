@@ -57,11 +57,11 @@ namespace ast {
     public:
         const gw_logic::LogicFile* logicFile;
         const std::vector<const Expression*> argumentList;
-        FunctionExpression(const gw_logic::LogicFile* logicFile, std::vector<const Expression*>&& argumentList);
+        FunctionExpression(const gw_logic::LogicFile* logicFile, std::vector<const Expression*> argumentList);
         void print(std::ostream& stream) const override;
     };
 
-    FunctionExpression* retrieveFunctionExpression(const std::string& name, std::vector<const Expression*>&& argumentList);
+    FunctionExpression* retrieveFunctionExpression(const std::string& name, std::vector<const Expression*> argumentList);
 
     class Statement: public Printable {
     public:

@@ -40,14 +40,14 @@ void handleResult(std::vector<ast::Line*>* line_list);
 %type <statement> STATEMENT
 %type <exp> EXP
 
-%left '^'
-%nonassoc UNARY_MINUS
-%left '*'
-%left '/'
-%left '\\'
-%left MOD_OPERATOR
-%left '+'
 %left '-'
+%left '+'
+%left MOD_OPERATOR
+%left '\\'
+%left '/'
+%left '*'
+%nonassoc UNARY_MINUS
+%left '^'
 
 %%
 

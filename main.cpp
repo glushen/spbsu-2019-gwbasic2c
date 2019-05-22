@@ -1,6 +1,5 @@
 #include <iostream>
 #include <algorithm>
-
 #include <parser.h>
 #include "ast.h"
 
@@ -45,4 +44,5 @@ void yyerror(const char *s, ...) {
     fprintf(stderr, "%d: error: ", yylineno);
     vfprintf(stderr, s, ap);
     fprintf(stderr, "\n");
+    va_end(ap);
 }

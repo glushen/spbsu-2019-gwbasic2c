@@ -1,3 +1,4 @@
+#include <utility>
 #include "ast.h"
 #include <cassert>
 #include "util.h"
@@ -22,10 +23,10 @@ ast::IntConstExpression::IntConstExpression(short value):
         ConstExpression(INT, util::to_string("%d", value)) { }
 
 ast::FloatConstExpression::FloatConstExpression(float value):
-        ConstExpression(FLOAT, util::to_string("%.9f", value)) { }
+        ConstExpression(FLOAT, util::to_string("%.7g", value)) { }
 
 ast::DoubleConstExpression::DoubleConstExpression(double value):
-        ConstExpression(DOUBLE, util::to_string("%.17f", value)) { }
+        ConstExpression(DOUBLE, util::to_string("%.16g", value)) { }
 
 ast::StringConstExpression::StringConstExpression(const std::string& value):
         ConstExpression(STRING, '"' + util::escape(value) + '"') { }
@@ -40,10 +41,10 @@ void ast::VariableExpression::print(ostream& stream) const {
     stream << name; // TODO доделать
 }
 
-ast::FunctionExpression::FunctionExpression(const LogicFile* logicFile, vector<const Expression*>&& argumentList):
+ast::FunctionExpression::FunctionExpression(const LogicFile* logicFile, vector<const Expression*> argumentList):
         Expression(logicFile->returnType),
         logicFile(logicFile),
-        argumentList(argumentList) { }
+        argumentList(std::move(argumentList)) { }
 
 void ast::FunctionExpression::print(ostream& stream) const {
     stream << logicFile->name << '(';
@@ -59,7 +60,7 @@ void ast::FunctionExpression::print(ostream& stream) const {
     stream << ')';
 }
 
-ast::FunctionExpression* ast::retrieveFunctionExpression(const string& name, vector<const Expression*>&& argumentList) {
+ast::FunctionExpression* ast::retrieveFunctionExpression(const string& name, vector<const Expression*> argumentList) {
     if (LOGIC_FILES_BY_GW_FUNCTION_NAME.count(name) == 0) {
         throw std::invalid_argument("Function " + name + " is not found");
     }
@@ -69,6 +70,8 @@ ast::FunctionExpression* ast::retrieveFunctionExpression(const string& name, vec
             continue;
         }
 
+        bool logicFileIsCorrect = true;
+
         for (int i = 0; i < argumentList.size(); i++) {
             Type actualType = argumentList[i]->type;
             Type expectedType = logicFile->argumentTypeList[i];
@@ -77,9 +80,14 @@ ast::FunctionExpression* ast::retrieveFunctionExpression(const string& name, vec
                                  || (actualType == INT && (expectedType == FLOAT || expectedType == DOUBLE))
                                  || (actualType == FLOAT && expectedType == DOUBLE);
 
-            if (typeIsCorrect) {
-                return new FunctionExpression(logicFile, forward<vector<const Expression*>>(argumentList));
+            if (!typeIsCorrect) {
+                logicFileIsCorrect = false;
+                break;
             }
+        }
+
+        if (logicFileIsCorrect) {
+            return new FunctionExpression(logicFile, std::move(argumentList));
         }
     }
 

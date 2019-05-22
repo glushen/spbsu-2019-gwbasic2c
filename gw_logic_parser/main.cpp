@@ -341,5 +341,6 @@ void yyerror(const char* str, ...) {
     fprintf(stderr, "Error: ");
     vfprintf(stderr, str, ap);
     fprintf(stderr, " in file %s\n", OPENED_LOGIC_FILE_PATH.c_str());
+    va_end(ap);
     exit(EXIT_FAILURE);
 }

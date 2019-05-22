@@ -16,8 +16,14 @@ char* new_string(gw_int length) {
 }
 char* to_string(const char* format, ...) {
     va_list arguments;
+
     va_start(arguments, format);
     char* result = new_string(vsnprintf(NULL, 0, format, arguments));
+    va_end(arguments);
+
+    va_start(arguments, format);
     vsprintf(result, format, arguments);
+    va_end(arguments);
+
     return result;
 }
