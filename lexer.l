@@ -4,7 +4,8 @@
 #include <parser.h>
 %}
 
-NUM_WITH_DOT    (\-?[0-9]*([0-9]\.|\.[0-9])[0-9]*)
+NUM             ([0-9]*([0-9]\.|\.[0-9])?[0-9]*)
+NUM_WITH_DOT    ([0-9]*([0-9]\.|\.[0-9])[0-9]*)
 FN_NAME         (fn[a-z0-9\.]*)
 VAR_NAME        ([a-z][a-z0-9\.]*)
 
@@ -14,8 +15,16 @@ VAR_NAME        ([a-z][a-z0-9\.]*)
 ^\ *[0-9]{1,5}  { yylval.line_number = atoi(yytext); return LINE_NUMBER; }
 
 \"[^\"]*\"      { yylval.exp = new ast::StringConstExpression(std::string(yytext+1, yyleng-2)); return CONST; }
-\-?[0-9]{1,7}   { yylval.exp = new ast::FloatConstExpression(atoi(yytext)); return CONST; }
-\-?[0-9]{8,}    { yylval.exp = new ast::DoubleConstExpression(atof(yytext)); return CONST; }
+[0-9]{1,7}      {
+                    long value = atol(yytext);
+                    if (-32768 <= value && value <= 32767) {
+                        yylval.exp = new ast::IntConstExpression(value);
+                    } else {
+                        yylval.exp = new ast::FloatConstExpression(value);
+                    }
+                    return CONST;
+                }
+[0-9]{8,}       { yylval.exp = new ast::DoubleConstExpression(atof(yytext)); return CONST; }
 {NUM_WITH_DOT}  {
                     auto digit_count = yyleng - 1 - (yytext[0] == '-' ? 1 : 0);
                     if (digit_count <= 7) {
@@ -25,24 +34,22 @@ VAR_NAME        ([a-z][a-z0-9\.]*)
                     }
                     return CONST;
                 }
-{NUM_WITH_DOT}E\-?[0-9]+ { yylval.exp = new ast::FloatConstExpression(atof(yytext)); return CONST; }
-{NUM_WITH_DOT}D\-?[0-9]+ {
-                             int i = 0;
-                             while (yytext[i] != 'D' && yytext[i] != 'd') i++;
-                             char temp = yytext[i];
-                             yytext[i] = 'E';
-                             yylval.exp = new ast::DoubleConstExpression(atof(yytext));
-                             yytext[i] = temp;
-                             return CONST;
-                         }
-{NUM_WITH_DOT}\! { yylval.exp = new ast::FloatConstExpression(atof(yytext)); return CONST; }
-{NUM_WITH_DOT}\# { yylval.exp = new ast::DoubleConstExpression(atof(yytext)); }
-&H[0-9a-f]{1,7}  { yylval.exp = new ast::FloatConstExpression(strtol(yytext+2, nullptr, 16)); return CONST; }
-&H[0-9a-f]{8,}   { yylval.exp = new ast::DoubleConstExpression(strtoll(yytext+2, nullptr, 16)); return CONST; }
-&O[0-9a-f]{1,7}  { yylval.exp = new ast::FloatConstExpression(strtol(yytext+2, nullptr, 8)); return CONST; }
-&O[0-9a-f]{8,}   { yylval.exp = new ast::DoubleConstExpression(strtoll(yytext+2, nullptr, 8)); return CONST; }
-&[0-9a-f]{1,7}   { yylval.exp = new ast::FloatConstExpression(strtol(yytext+1, nullptr, 8)); return CONST; }
-&[0-9a-f]{8,}    { yylval.exp = new ast::DoubleConstExpression(strtoll(yytext+1, nullptr, 8)); return CONST; }
+{NUM}E\-?[0-9]+ { yylval.exp = new ast::FloatConstExpression(atof(yytext)); return CONST; }
+{NUM}D\-?[0-9]+ {
+                    int i = 0;
+                    while (yytext[i] != 'D' && yytext[i] != 'd') i++;
+                    char temp = yytext[i];
+                    yytext[i] = 'E';
+                    yylval.exp = new ast::DoubleConstExpression(atof(yytext));
+                    yytext[i] = temp;
+                    return CONST;
+                }
+{NUM}\!                  { yylval.exp = new ast::FloatConstExpression(atof(yytext)); return CONST; }
+{NUM}\#                  { yylval.exp = new ast::DoubleConstExpression(atof(yytext)); }
+&H0*[0-7][0-9a-f]{1,3}   { yylval.exp = new ast::IntConstExpression(strtol(yytext+2, nullptr, 16)); return CONST; }
+&H0*[89a-f][0-9a-f]{1,3} { yylval.exp = new ast::IntConstExpression(strtol(yytext+2, nullptr, 16) - 65536); return CONST; }
+&O0*[0-7]{1,5}           { yylval.exp = new ast::IntConstExpression(strtol(yytext+2, nullptr, 8)); return CONST; }
+&0*[0-7]{1,5}            { yylval.exp = new ast::IntConstExpression(strtol(yytext+1, nullptr, 8)); return CONST; }
 
 CSRLIN|DATE$|TIME$|ENVIRON\$|ERDEV|ERDEV\$|ERR|ERL|INKEY$ {
     yylval.name = strndup(yytext, yyleng); return UNSUPPORTED_VAR;
