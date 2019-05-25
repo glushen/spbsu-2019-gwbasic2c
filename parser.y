@@ -40,6 +40,7 @@ void handleResult(std::vector<ast::Line*>* line_list);
 %type <statement> STATEMENT
 %type <exp> EXP
 
+%left EQUAL_OPERATOR UNEQUAL_OPERATOR LESS_OPERATOR GREATER_OPERATOR LESS_EQUAL_OPERATOR GREATER_EQUAL_OPERATOR
 %left '-'
 %left '+'
 %left MOD_OPERATOR
@@ -88,3 +89,9 @@ EXP:
 |   EXP MOD_OPERATOR EXP       { $$ = ast::retrieveFunctionExpression("mod", {$1, $3}); }
 |   EXP '+' EXP                { $$ = ast::retrieveFunctionExpression("sum", {$1, $3}); }
 |   EXP '-' EXP                { $$ = ast::retrieveFunctionExpression("sub", {$1, $3}); }
+|   EXP EQUAL_OPERATOR EXP          { $$ = ast::retrieveFunctionExpression("equal", {$1, $3}); }
+|   EXP UNEQUAL_OPERATOR EXP        { $$ = ast::retrieveFunctionExpression("unequal", {$1, $3}); }
+|   EXP LESS_OPERATOR EXP           { $$ = ast::retrieveFunctionExpression("less", {$1, $3}); }
+|   EXP GREATER_OPERATOR EXP        { $$ = ast::retrieveFunctionExpression("greater", {$1, $3}); }
+|   EXP LESS_EQUAL_OPERATOR EXP     { $$ = ast::retrieveFunctionExpression("geq", {$1, $3}); }
+|   EXP GREATER_EQUAL_OPERATOR EXP  { $$ = ast::retrieveFunctionExpression("leq", {$1, $3}); }
