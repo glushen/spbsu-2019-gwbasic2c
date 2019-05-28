@@ -65,12 +65,16 @@ ast::FunctionExpression* ast::retrieveFunctionExpression(const string& name, vec
         throw std::invalid_argument("Function " + name + " is not found");
     }
 
-    for (auto logicFile: LOGIC_FILES_BY_GW_FUNCTION_NAME.at(name)) {
+    auto& logicFiles = LOGIC_FILES_BY_GW_FUNCTION_NAME.at(name);
+    const LogicFile* correctableLogicFile = nullptr;
+
+    for (auto logicFile: logicFiles) {
         if (logicFile->argumentTypeList.size() != argumentList.size()) {
             continue;
         }
 
         bool logicFileIsCorrect = true;
+        bool logicFileIsCorrectable = true;
 
         for (int i = 0; i < argumentList.size(); i++) {
             Type actualType = argumentList[i]->type;
@@ -79,16 +83,35 @@ ast::FunctionExpression* ast::retrieveFunctionExpression(const string& name, vec
             bool typeIsCorrect = actualType == expectedType
                                  || (actualType == INT && (expectedType == FLOAT || expectedType == DOUBLE))
                                  || (actualType == FLOAT && expectedType == DOUBLE);
+            logicFileIsCorrect = logicFileIsCorrect && typeIsCorrect;
 
-            if (!typeIsCorrect) {
-                logicFileIsCorrect = false;
-                break;
-            }
+            bool canBeCasted = (expectedType == INT && (actualType == FLOAT || actualType == DOUBLE))
+                               || (expectedType == FLOAT && actualType == DOUBLE);
+            logicFileIsCorrectable = logicFileIsCorrectable && canBeCasted;
         }
 
         if (logicFileIsCorrect) {
             return new FunctionExpression(logicFile, std::move(argumentList));
         }
+
+        if (logicFileIsCorrectable) {
+            correctableLogicFile = logicFile;
+        }
+    }
+
+    if (correctableLogicFile != nullptr) {
+        for (int i = 0; i < argumentList.size(); i++) {
+            Type actualType = argumentList[i]->type;
+            Type expectedType = correctableLogicFile->argumentTypeList[i];
+
+            if (expectedType == INT && (actualType == FLOAT || actualType == DOUBLE)) {
+                argumentList[i] = ast::retrieveFunctionExpression("cint", {argumentList[i]});
+            } else if (expectedType == FLOAT && actualType == DOUBLE) {
+                argumentList[i] = ast::retrieveFunctionExpression("csng", {argumentList[i]});
+            }
+        }
+
+        return new FunctionExpression(correctableLogicFile, std::move(argumentList));
     }
 
     throw std::invalid_argument("Function " + name + " with required signature is not found");

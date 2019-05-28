@@ -40,6 +40,12 @@ void handleResult(std::vector<ast::Line*>* line_list);
 %type <statement> STATEMENT
 %type <exp> EXP
 
+%left IMP_OPERATOR
+%left EQV_OPERATOR
+%left XOR_OPERATOR
+%left OR_OPERATOR
+%left AND_OPERATOR
+%nonassoc NOT_OPERATOR
 %left EQUAL_OPERATOR UNEQUAL_OPERATOR LESS_OPERATOR GREATER_OPERATOR LESS_EQUAL_OPERATOR GREATER_EQUAL_OPERATOR
 %left '-'
 %left '+'
@@ -95,3 +101,9 @@ EXP:
 |   EXP GREATER_OPERATOR EXP        { $$ = ast::retrieveFunctionExpression("greater", {$1, $3}); }
 |   EXP LESS_EQUAL_OPERATOR EXP     { $$ = ast::retrieveFunctionExpression("geq", {$1, $3}); }
 |   EXP GREATER_EQUAL_OPERATOR EXP  { $$ = ast::retrieveFunctionExpression("leq", {$1, $3}); }
+|   NOT_OPERATOR EXP                { $$ = ast::retrieveFunctionExpression("not", {$2}); }
+|   EXP AND_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("and", {$1, $3}); }
+|   EXP OR_OPERATOR EXP             { $$ = ast::retrieveFunctionExpression("or", {$1, $3}); }
+|   EXP XOR_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("xor", {$1, $3}); }
+|   EXP EQV_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("eqv", {$1, $3}); }
+|   EXP IMP_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("imp", {$1, $3}); }
