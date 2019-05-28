@@ -27,7 +27,6 @@ int main(int argc, char* argv[]) {
 void printLines(std::vector<ast::Line*>* lines) {
     for (auto line : *lines) {
         line->print(std::cout);
-        std::cout << std::endl;
     }
 }
 

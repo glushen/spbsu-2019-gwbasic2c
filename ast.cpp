@@ -130,15 +130,16 @@ ast::Line::Line(int lineNumber, vector<ast::Statement*>* statementList, char* co
         comment(comment) { }
 
 void ast::Line::print(ostream& stream) const {
-    stream << lineNumber << " ";
-    bool firstPrinted = false;
-    for (auto statement : *statementList) {
-        if (firstPrinted) {
-            stream << " :";
-        } else {
-            firstPrinted = true;
-        }
-        statement->print(stream);
+    stream << "set_line_number(" << lineNumber << ");";
+
+    if (comment[0] != '\0') {
+        stream << " //" << comment;
     }
-    stream << " '" << comment;
+
+    stream << endl;
+
+    for (auto statement : *statementList) {
+        statement->print(stream);
+        stream << ';' << endl;
+    }
 }
