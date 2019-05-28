@@ -22,10 +22,11 @@ void handleResult(std::vector<ast::Line*>* line_list);
     ast::Expression* exp;
 }
 
-%token <exp> CONST
+%token <exp> CONST VARIABLE
 %token <name> GW_FN_NAME_UNSUPPORTED GW_CMD_NAME_UNSUPPORTED GW_STM_NAME_UNSUPPORTED
 %token <name> GW_FN_NAME GW_CMD_NAME GW_STM_NAME
-%token <name> INT_VAR FLOAT_VAR DOUBLE_VAR STRING_VAR FN_VAR UNSUPPORTED_VAR
+%token <name> FN_VAR UNSUPPORTED_VAR
+%token LET_KEYWORD
 %token MOD_OPERATOR
 %token EQUAL_OPERATOR UNEQUAL_OPERATOR LESS_OPERATOR GREATER_OPERATOR LESS_EQUAL_OPERATOR GREATER_EQUAL_OPERATOR
 %token NOT_OPERATOR AND_OPERATOR OR_OPERATOR XOR_OPERATOR EQV_OPERATOR IMP_OPERATOR
@@ -84,6 +85,10 @@ OPTIONAL_COMMENT:
     %empty           { $$ = strdup(""); }
 |   COMMENT          { $$ = $1; }
 
+OPTIONAL_LET_KEYWORD:
+    %empty
+|   LET_KEYWORD
+
 EXP:
     CONST                      { $$ = $1; }
 |   '(' EXP ')'                { $$ = $2; }
@@ -107,3 +112,4 @@ EXP:
 |   EXP XOR_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("xor", {$1, $3}); }
 |   EXP EQV_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("eqv", {$1, $3}); }
 |   EXP IMP_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("imp", {$1, $3}); }
+|   OPTIONAL_LET_KEYWORD VARIABLE EQUAL_OPERATOR EXP  { $$ = ast::retrieveFunctionExpression("let", {$2, $4}); }

@@ -49,7 +49,7 @@ namespace ast {
     class VariableExpression: public Expression {
     public:
         const std::string name;
-        VariableExpression(std::string&& name, gw_logic::Type type);
+        VariableExpression(std::string name, gw_logic::Type type);
         void print(std::ostream& stream) const override;
     };
 

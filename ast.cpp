@@ -31,14 +31,14 @@ ast::DoubleConstExpression::DoubleConstExpression(double value):
 ast::StringConstExpression::StringConstExpression(const std::string& value):
         ConstExpression(STRING, '"' + util::escape(value) + '"') { }
 
-ast::VariableExpression::VariableExpression(string&& name, Type type):
+ast::VariableExpression::VariableExpression(std::string name, gw_logic::Type type):
         Expression(type),
-        name(name) {
+        name(std::move(name)) {
     assert(type == INT_PTR || type == FLOAT_PTR || type == DOUBLE_PTR || type == STRING_PTR);
 }
 
 void ast::VariableExpression::print(ostream& stream) const {
-    stream << name; // TODO доделать
+    stream << '&' << name;
 }
 
 ast::FunctionExpression::FunctionExpression(const LogicFile* logicFile, vector<const Expression*> argumentList):
@@ -87,7 +87,7 @@ ast::FunctionExpression* ast::retrieveFunctionExpression(const string& name, vec
 
             bool canBeCasted = (expectedType == INT && (actualType == FLOAT || actualType == DOUBLE))
                                || (expectedType == FLOAT && actualType == DOUBLE);
-            logicFileIsCorrectable = logicFileIsCorrectable && canBeCasted;
+            logicFileIsCorrectable = logicFileIsCorrectable && (typeIsCorrect || canBeCasted);
         }
 
         if (logicFileIsCorrect) {
