@@ -16,8 +16,8 @@ flex_target(gw_logic_lexer gw_logic_parser/lexer.l ${CMAKE_CURRENT_BINARY_DIR}/g
 add_flex_bison_dependency(gw_logic_lexer gw_logic_parser)
 add_executable(gw_logic_parser EXCLUDE_FROM_ALL gw_logic_parser/main.h gw_logic_parser/main.cpp ${BISON_gw_logic_parser_OUTPUTS} ${FLEX_gw_logic_lexer_OUTPUTS} util.cpp util.h)
 
-file(GLOB gw_logic_core_files gw_logic/core/*.c)
-file(GLOB gw_logic_files gw_logic/*.c)
+file(GLOB gw_logic_core_files gw_logic/core/*.cpp)
+file(GLOB gw_logic_files gw_logic/*.cpp)
 set(gw_logic_parser_arguments -core ${gw_logic_core_files} -logic ${gw_logic_files} -output ${CMAKE_CURRENT_BINARY_DIR}/gw_logic.h)
 add_custom_command(COMMAND gw_logic_parser ${gw_logic_parser_arguments} OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/gw_logic.h)
 

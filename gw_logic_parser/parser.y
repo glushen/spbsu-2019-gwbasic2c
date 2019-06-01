@@ -33,7 +33,7 @@ template<typename T> T move_ptr(T* ptr) {
 %type <include_path> INCLUDE_LINE
 %type <include_list> INCLUDE_LIST
 
-%token <type_name> CONST_TYPE PTR_TYPE VOID_TYPE
+%token <type_name> CONST_TYPE REF_TYPE VOID_TYPE
 %type <type_name> ARGUMENT_TYPE RETURN_TYPE ARGUMENT
 %type <type_list> ARGUMENT_LIST NON_EMPTY_ARGUMENT_LIST
 
@@ -61,7 +61,7 @@ END_OF_LINE:
 
 ARGUMENT_TYPE:
     CONST_TYPE  { $$ = $1; }
-|   PTR_TYPE    { $$ = $1; }
+|   REF_TYPE    { $$ = $1; }
 
 RETURN_TYPE:
     CONST_TYPE  { $$ = $1; }

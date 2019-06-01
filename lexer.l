@@ -93,11 +93,11 @@ EQV  { return EQV_OPERATOR; }
 IMP  { return IMP_OPERATOR; }
 
 {FN_NAME}       { yylval.name = strndup(yytext, yyleng); return FN_VAR; }
-{VAR_NAME}      { yylval.exp = new ast::VariableExpression(std::string(yytext, yyleng), gw_logic::FLOAT_PTR); return VARIABLE; }
-{VAR_NAME}\!    { yylval.exp = new ast::VariableExpression(std::string(yytext, yyleng-1), gw_logic::FLOAT_PTR); return VARIABLE; }
-{VAR_NAME}\%    { yylval.exp = new ast::VariableExpression(std::string(yytext, yyleng-1), gw_logic::INT_PTR); return VARIABLE; }
-{VAR_NAME}\#    { yylval.exp = new ast::VariableExpression(std::string(yytext, yyleng-1), gw_logic::DOUBLE_PTR); return VARIABLE; }
-{VAR_NAME}\$    { yylval.exp = new ast::VariableExpression(std::string(yytext, yyleng-1), gw_logic::STRING_PTR); return VARIABLE; }
+{VAR_NAME}      { yylval.exp = new ast::VariableExpression(std::string(yytext, yyleng), gw_logic::FLOAT_REF); return VARIABLE; }
+{VAR_NAME}\!    { yylval.exp = new ast::VariableExpression(std::string(yytext, yyleng-1), gw_logic::FLOAT_REF); return VARIABLE; }
+{VAR_NAME}\%    { yylval.exp = new ast::VariableExpression(std::string(yytext, yyleng-1), gw_logic::INT_REF); return VARIABLE; }
+{VAR_NAME}\#    { yylval.exp = new ast::VariableExpression(std::string(yytext, yyleng-1), gw_logic::DOUBLE_REF); return VARIABLE; }
+{VAR_NAME}\$    { yylval.exp = new ast::VariableExpression(std::string(yytext, yyleng-1), gw_logic::STRING_REF); return VARIABLE; }
 
 [ \t]           { /* ignore */ }
 \r\n|\r|\n      { return '\n'; }

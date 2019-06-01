@@ -272,7 +272,7 @@ namespace gw_logic {
     using std::map, std::vector, std::string;
 
     enum Type {
-        INT, FLOAT, DOUBLE, STRING, INT_PTR, FLOAT_PTR, DOUBLE_PTR, STRING_PTR, VOID
+        INT, FLOAT, DOUBLE, STRING, INT_REF, FLOAT_REF, DOUBLE_REF, STRING_REF, VOID
     };
 
     struct CoreFile {

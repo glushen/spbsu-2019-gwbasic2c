@@ -34,7 +34,7 @@ ast::StringConstExpression::StringConstExpression(const std::string& value):
 ast::VariableExpression::VariableExpression(std::string name, gw_logic::Type type):
         Expression(type),
         name(std::move(name)) {
-    assert(type == INT_PTR || type == FLOAT_PTR || type == DOUBLE_PTR || type == STRING_PTR);
+    assert(type == INT_REF || type == FLOAT_REF || type == DOUBLE_REF || type == STRING_REF);
 }
 
 void ast::VariableExpression::print(ostream& stream) const {
@@ -130,7 +130,7 @@ ast::Line::Line(int lineNumber, vector<ast::Statement*>* statementList, char* co
         comment(comment) { }
 
 void ast::Line::print(ostream& stream) const {
-    stream << "set_line_number(" << lineNumber << ");";
+    stream << "set_line(" << lineNumber << ");";
 
     if (comment[0] != '\0') {
         stream << " //" << comment;
