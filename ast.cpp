@@ -23,6 +23,19 @@ std::string ast::to_string(gw_logic::Type type) {
 
 ast::Printable::~Printable() = default;
 
+template <typename T>
+void ast::joinAndPrint(std::ostream& stream, const vector<T>& values, const std::string& separator) {
+    bool first = true;
+    for (auto& value : values) {
+        if (first) {
+            first = false;
+        } else {
+            stream << separator;
+        }
+        value->print(stream);
+    }
+}
+
 ast::Expression::Expression(Type type):
         type(type) { }
 
@@ -53,7 +66,29 @@ ast::VariableExpression::VariableExpression(std::string name, gw_logic::Type typ
 }
 
 void ast::VariableExpression::print(ostream& stream) const {
-    stream << '&' << name;
+    stream << '_' << name;
+}
+
+ast::VectorDimExpression::VectorDimExpression(const VariableExpression* variable, std::vector<std::unique_ptr<Expression>> new_sizes):
+        Expression(VOID),
+        variable(variable),
+        new_sizes(castOrThrow(std::move(new_sizes), INT)) { }
+
+void ast::VectorDimExpression::print(std::ostream& stream) const {
+    stream << "dim(_" << variable->name << "_v,_" << variable->name << "_s,{";
+    joinAndPrint(stream, new_sizes);
+    stream << "})";
+}
+
+ast::VectorGetElementExpression::VectorGetElementExpression(const VariableExpression* variable, std::vector<std::unique_ptr<Expression>> indexes):
+        Expression(variable->type),
+        variable(variable),
+        indexes(castOrThrow(std::move(indexes), INT)) { }
+
+void ast::VectorGetElementExpression::print(std::ostream& stream) const {
+    stream << "get(_" << variable->name << "_v,_" << variable->name << "_s,{";
+    joinAndPrint(stream, indexes);
+    stream << "})";
 }
 
 ast::FunctionExpression::FunctionExpression(const LogicFile* logicFile, vector<const Expression*> argumentList):
@@ -63,15 +98,7 @@ ast::FunctionExpression::FunctionExpression(const LogicFile* logicFile, vector<c
 
 void ast::FunctionExpression::print(ostream& stream) const {
     stream << logicFile->name << '(';
-    bool first = true;
-    for (auto& argument : argumentList) {
-        if (first) {
-            first = false;
-        } else {
-            stream << ',';
-        }
-        argument->print(stream);
-    }
+    joinAndPrint(stream, argumentList);
     stream << ')';
 }
 
@@ -203,6 +230,13 @@ ast::Expression* ast::castOrThrow(const ast::Expression* expression, gw_logic::T
     } else {
         throw std::invalid_argument("Cannot cast " + to_string(expression->type) + " to " + to_string(targetType));
     }
+}
+
+std::vector<std::unique_ptr<ast::Expression>> ast::castOrThrow(std::vector<std::unique_ptr<Expression>> expressions, gw_logic::Type targetType) {
+    for (auto& expression : expressions) {
+        expression = std::unique_ptr<Expression>(castOrThrow(expression.release(), targetType));
+    }
+    return expressions;
 }
 
 ast::Statement::Statement(Expression* expression):

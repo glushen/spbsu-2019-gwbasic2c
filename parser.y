@@ -3,12 +3,19 @@
 #include <stdarg.h>
 #include <string.h>
 #include <vector>
+#include <memory>
 #include <ast.h>
 
 extern int yylex(void);
 extern int yylineno;
 void yyerror(const char *s, ...);
 void handleResult(std::vector<ast::Line*>* line_list);
+
+template<typename T> T move_ptr(T* ptr) {
+    T value = move(*ptr);
+    delete ptr;
+    return value;
+}
 }
 
 %union {
@@ -17,16 +24,19 @@ void handleResult(std::vector<ast::Line*>* line_list);
     std::vector<ast::Line*>* line_list;
     ast::Line* line;
     std::vector<ast::Statement*>* statementList;
+    std::vector<std::unique_ptr<ast::Expression>>* expressionList;
     ast::Statement* statement;
     char* name;
     ast::Expression* exp;
+    ast::VariableExpression* variable;
 }
 
-%token <exp> CONST VARIABLE
+%token <exp> CONST
+%token <variable> VARIABLE
 %token <name> GW_FN_NAME_UNSUPPORTED GW_CMD_NAME_UNSUPPORTED GW_STM_NAME_UNSUPPORTED
 %token <name> GW_FN_NAME GW_CMD_NAME GW_STM_NAME
 %token <name> FN_VAR UNSUPPORTED_VAR
-%token LET_KEYWORD
+%token LET_KEYWORD DIM_KEYWORD
 %token MOD_OPERATOR
 %token EQUAL_OPERATOR UNEQUAL_OPERATOR LESS_OPERATOR GREATER_OPERATOR LESS_EQUAL_OPERATOR GREATER_EQUAL_OPERATOR
 %token NOT_OPERATOR AND_OPERATOR OR_OPERATOR XOR_OPERATOR EQV_OPERATOR IMP_OPERATOR
@@ -40,6 +50,8 @@ void handleResult(std::vector<ast::Line*>* line_list);
 %type <statementList> STATEMENT_LIST NOT_EMPTY_STATEMENT_LIST
 %type <statement> STATEMENT
 %type <exp> EXP
+%type <expressionList> EXP_LIST NOT_EMPTY_EXP_LIST
+%type <exp> LVALUE
 
 %left IMP_OPERATOR
 %left EQV_OPERATOR
@@ -89,6 +101,18 @@ OPTIONAL_LET_KEYWORD:
     %empty
 |   LET_KEYWORD
 
+EXP_LIST:
+    %empty              { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); }
+|   NOT_EMPTY_EXP_LIST  { $$ = $1; }
+
+NOT_EMPTY_EXP_LIST:
+    EXP                         { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->push_back(std::unique_ptr<ast::Expression>($1)); }
+|   NOT_EMPTY_EXP_LIST ',' EXP  { $$ = $1; $$->push_back(std::unique_ptr<ast::Expression>($3)); }
+
+LVALUE:
+    VARIABLE                   { $$ = $1; }
+|   VARIABLE '(' EXP_LIST ')'  { $$ = new ast::VectorGetElementExpression($1, move_ptr($3)); }
+
 EXP:
     CONST                      { $$ = $1; }
 |   '(' EXP ')'                { $$ = $2; }
@@ -112,4 +136,5 @@ EXP:
 |   EXP XOR_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("xor", {$1, $3}); }
 |   EXP EQV_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("eqv", {$1, $3}); }
 |   EXP IMP_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("imp", {$1, $3}); }
-|   OPTIONAL_LET_KEYWORD VARIABLE EQUAL_OPERATOR EXP  { $$ = ast::retrieveFunctionExpression("let", {$2, $4}); }
+|   OPTIONAL_LET_KEYWORD LVALUE EQUAL_OPERATOR EXP  { $$ = ast::retrieveFunctionExpression("let", {$2, $4}); }
+|   DIM_KEYWORD VARIABLE '(' EXP_LIST ')'  { $$ = new ast::VectorDimExpression($2, move_ptr($4)); }

@@ -52,6 +52,7 @@ VAR_NAME        ([a-z][a-z0-9\.]*)
 &0*[0-7]{1,5}            { yylval.exp = new ast::IntConstExpression(strtol(yytext+1, nullptr, 8)); return CONST; }
 
 LET  { return LET_KEYWORD; }
+DIM  { return DIM_KEYWORD; }
 
 CSRLIN|DATE$|TIME$|ENVIRON\$|ERDEV|ERDEV\$|ERR|ERL|INKEY$ {
     yylval.name = strndup(yytext, yyleng); return UNSUPPORTED_VAR;
@@ -101,7 +102,7 @@ IMP  { return IMP_OPERATOR; }
 
 [ \t]           { /* ignore */ }
 \r\n|\r|\n      { return '\n'; }
-\:              { return yytext[0]; }
+\:|\,           { return yytext[0]; }
 <<EOF>>         { return END_OF_FILE; }
 .               { yyerror("Mystery character %c", yytext[0]); }
 

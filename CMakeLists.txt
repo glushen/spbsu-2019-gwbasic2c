@@ -5,8 +5,9 @@ set(CMAKE_CXX_STANDARD 17)
 find_package(BISON)
 find_package(FLEX)
 
+aux_source_directory(gw_logic/core gw_logic_core_source)
 aux_source_directory(gw_logic gw_logic_source)
-add_library(gw_logic EXCLUDE_FROM_ALL ${gw_logic_source})
+add_library(gw_logic EXCLUDE_FROM_ALL ${gw_logic_core_source} ${gw_logic_source})
 target_link_libraries(gw_logic m)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})

@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #define gw_int short
 
@@ -14,6 +15,9 @@ const char* ILLEGAL_FUNCTION_CALL = "Illegal function call";
 const char* OVERFLOW = "Overflow";
 const char* STRING_TOO_LONG = "String too long";
 const char* DIVISION_BY_ZERO = "Division by zero";
+const char* DUPLICATE_DEFINITION = "Duplicate Definition";
+const char* MISSING_OPERAND = "Missing operand";
+const char* SUBSCRIPT_OUT_OF_RANGE = "Subscript out of range";
 
 void assert(bool condition, const char* message) {
     if (!condition) {

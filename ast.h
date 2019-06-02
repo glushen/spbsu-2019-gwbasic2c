@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <ostream>
+#include <memory>
 #include <gw_logic.h>
 #include <cmake-build-debug/gw_logic.h>
 
@@ -14,6 +15,9 @@ namespace ast {
     protected:
         virtual ~Printable();
     };
+
+    template <typename T>
+    void joinAndPrint(std::ostream& stream, const std::vector<T>& values, const std::string& separator = ",");
 
     class Expression: public Printable {
     public:
@@ -56,6 +60,22 @@ namespace ast {
         void print(std::ostream& stream) const override;
     };
 
+    class VectorDimExpression: public Expression {
+    public:
+        const VariableExpression* variable;
+        const std::vector<std::unique_ptr<Expression>> new_sizes;
+        VectorDimExpression(const VariableExpression* variable, std::vector<std::unique_ptr<Expression>> new_sizes);
+        void print(std::ostream& stream) const override;
+    };
+
+    class VectorGetElementExpression: public Expression {
+    public:
+        const VariableExpression* variable;
+        const std::vector<std::unique_ptr<Expression>> indexes;
+        VectorGetElementExpression(const VariableExpression* variable, std::vector<std::unique_ptr<Expression>> indexes);
+        void print(std::ostream& stream) const override;
+    };
+
     class FunctionExpression: public Expression {
     public:
         const gw_logic::LogicFile* logicFile;
@@ -76,6 +96,7 @@ namespace ast {
     bool castableImplicitly(gw_logic::Type sourceType, gw_logic::Type targetType);
     bool castableExplicitly(gw_logic::Type sourceType, gw_logic::Type targetType);
     Expression* castOrThrow(const Expression* expression, gw_logic::Type targetType);
+    std::vector<std::unique_ptr<Expression>> castOrThrow(std::vector<std::unique_ptr<Expression>> expression, gw_logic::Type targetType);
 
     class Statement: public Printable {
     public:
