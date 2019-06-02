@@ -3,8 +3,11 @@
 #include <vector>
 #include <ostream>
 #include <gw_logic.h>
+#include <cmake-build-debug/gw_logic.h>
 
 namespace ast {
+    std::string to_string(gw_logic::Type type);
+
     class Printable {
     public:
         virtual void print(std::ostream& stream) const = 0;
@@ -62,6 +65,17 @@ namespace ast {
     };
 
     FunctionExpression* retrieveFunctionExpression(const std::string& name, std::vector<const Expression*> argumentList);
+
+    class CastedExpression: public Expression {
+    public:
+        const Expression* expression;
+        CastedExpression(const Expression* expression, gw_logic::Type type);
+        void print(std::ostream& stream) const override;
+    };
+
+    bool castableImplicitly(gw_logic::Type sourceType, gw_logic::Type targetType);
+    bool castableExplicitly(gw_logic::Type sourceType, gw_logic::Type targetType);
+    Expression* castOrThrow(const Expression* expression, gw_logic::Type targetType);
 
     class Statement: public Printable {
     public:

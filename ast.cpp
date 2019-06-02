@@ -6,6 +6,21 @@
 using namespace std;
 using namespace gw_logic;
 
+std::string ast::to_string(gw_logic::Type type) {
+    switch (type) {
+        case INT: return "INT";
+        case FLOAT: return "FLOAT";
+        case DOUBLE: return "DOUBLE";
+        case STRING: return "STRING";
+        case INT_REF: return "INT_REF";
+        case FLOAT_REF: return "FLOAT_REF";
+        case DOUBLE_REF: return "DOUBLE_REF";
+        case STRING_REF: return "STRING_REF";
+        case VOID: return "VOID";
+    }
+    assert(false);
+}
+
 ast::Printable::~Printable() = default;
 
 ast::Expression::Expression(Type type):
@@ -80,14 +95,11 @@ ast::FunctionExpression* ast::retrieveFunctionExpression(const string& name, vec
             Type actualType = argumentList[i]->type;
             Type expectedType = logicFile->argumentTypeList[i];
 
-            bool typeIsCorrect = actualType == expectedType
-                                 || (actualType == INT && (expectedType == FLOAT || expectedType == DOUBLE))
-                                 || (actualType == FLOAT && expectedType == DOUBLE);
-            logicFileIsCorrect = logicFileIsCorrect && typeIsCorrect;
+            bool typeIsCastableImplicitly = castableImplicitly(actualType, expectedType);
+            logicFileIsCorrect = logicFileIsCorrect && typeIsCastableImplicitly;
 
-            bool canBeCasted = (expectedType == INT && (actualType == FLOAT || actualType == DOUBLE))
-                               || (expectedType == FLOAT && actualType == DOUBLE);
-            logicFileIsCorrectable = logicFileIsCorrectable && (typeIsCorrect || canBeCasted);
+            bool typeIsCastable = typeIsCastableImplicitly || castableExplicitly(actualType, expectedType);
+            logicFileIsCorrectable = logicFileIsCorrectable && typeIsCastable;
         }
 
         if (logicFileIsCorrect) {
@@ -101,20 +113,96 @@ ast::FunctionExpression* ast::retrieveFunctionExpression(const string& name, vec
 
     if (correctableLogicFile != nullptr) {
         for (int i = 0; i < argumentList.size(); i++) {
-            Type actualType = argumentList[i]->type;
-            Type expectedType = correctableLogicFile->argumentTypeList[i];
-
-            if (expectedType == INT && (actualType == FLOAT || actualType == DOUBLE)) {
-                argumentList[i] = ast::retrieveFunctionExpression("cint", {argumentList[i]});
-            } else if (expectedType == FLOAT && actualType == DOUBLE) {
-                argumentList[i] = ast::retrieveFunctionExpression("csng", {argumentList[i]});
-            }
+            argumentList[i] = castOrThrow(argumentList[i], correctableLogicFile->argumentTypeList[i]);
         }
 
         return new FunctionExpression(correctableLogicFile, std::move(argumentList));
     }
 
     throw std::invalid_argument("Function " + name + " with required signature is not found");
+}
+
+ast::CastedExpression::CastedExpression(const ast::Expression* expression, gw_logic::Type type):
+    Expression(type),
+    expression(expression) { }
+
+void ast::CastedExpression::print(std::ostream& stream) const {
+    expression->print(stream);
+}
+
+bool ast::castableImplicitly(gw_logic::Type sourceType, gw_logic::Type targetType) {
+    if (sourceType == targetType) return true;
+
+    switch (targetType) {
+        case DOUBLE:
+            switch (sourceType) {
+                case DOUBLE_REF:
+                case FLOAT:
+                case FLOAT_REF:
+                case INT:
+                case INT_REF:
+                    return true;
+                default:
+                    return false;
+            }
+        case FLOAT:
+            switch (sourceType) {
+                case FLOAT_REF:
+                case INT:
+                case INT_REF:
+                    return true;
+                default:
+                    return false;
+            }
+        case INT:
+            return sourceType == INT_REF;
+        case STRING:
+            return sourceType == STRING_REF;
+        default:
+            return false;
+    }
+}
+
+bool ast::castableExplicitly(gw_logic::Type sourceType, gw_logic::Type targetType) {
+    switch (targetType) {
+        case INT:
+            switch (sourceType) {
+                case FLOAT:
+                case FLOAT_REF:
+                case DOUBLE:
+                case DOUBLE_REF:
+                    return true;
+                default:
+                    return false;
+            }
+        case FLOAT:
+            switch (sourceType) {
+                case DOUBLE:
+                case DOUBLE_REF:
+                    return true;
+                default:
+                    return false;
+            }
+        default:
+            return false;
+    }
+}
+
+ast::Expression* ast::castOrThrow(const ast::Expression* expression, gw_logic::Type targetType) {
+    if (castableImplicitly(expression->type, targetType)) {
+        return new CastedExpression(expression, targetType);
+    } else if (castableExplicitly(expression->type, targetType)) {
+        switch (targetType) {
+            case INT:
+                return retrieveFunctionExpression("cint", {expression});
+            case FLOAT:
+                return retrieveFunctionExpression("csng", {expression});
+            default:
+                assert(false);
+        }
+    } else {
+        throw std::invalid_argument("Cannot cast " + to_string(expression->type) + " to " + to_string(targetType));
+    }
 }
 
 ast::Statement::Statement(Expression* expression):
