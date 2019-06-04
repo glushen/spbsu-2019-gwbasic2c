@@ -1,24 +1,7 @@
 #pragma once
-#include <string>
-#include <vector>
-#include <ostream>
-#include <memory>
-#include <gw_logic.h>
-#include <cmake-build-debug/gw_logic.h>
+#include "node.h"
 
 namespace ast {
-    std::string to_string(gw_logic::Type type);
-
-    class Printable {
-    public:
-        virtual void print(std::ostream& stream) const = 0;
-    protected:
-        virtual ~Printable();
-    };
-
-    template <typename T>
-    void joinAndPrint(std::ostream& stream, const std::vector<T>& values, const std::string& separator = ",");
-
     class Expression: public Printable {
     public:
         const gw_logic::Type type;
@@ -97,20 +80,4 @@ namespace ast {
     bool castableExplicitly(gw_logic::Type sourceType, gw_logic::Type targetType);
     Expression* castOrThrow(const Expression* expression, gw_logic::Type targetType);
     std::vector<std::unique_ptr<Expression>> castOrThrow(std::vector<std::unique_ptr<Expression>> expression, gw_logic::Type targetType);
-
-    class Statement: public Printable {
-    public:
-        Expression* expression;
-        explicit Statement(Expression* expression);
-        void print(std::ostream& stream) const override;
-    };
-
-    class Line: public Printable {
-    public:
-        int lineNumber;
-        std::vector<Statement*>* statementList;
-        char* comment;
-        Line(int line_number, std::vector<Statement*>* statementList, char* comment);
-        void print(std::ostream& stream) const override;
-    };
 }

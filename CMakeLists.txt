@@ -30,5 +30,7 @@ add_executable(gwbasic2c
         ${BISON_parser_OUTPUTS}
         ${FLEX_lexer_OUTPUTS}
         ${CMAKE_CURRENT_BINARY_DIR}/gw_logic.h
-        ast.h ast.cpp
-        util.h util.cpp)
+        util.h util.cpp
+        ast/node.h ast/node.cpp
+        ast/expression.h ast/expression.cpp
+        ast/program.cpp ast/program.h)

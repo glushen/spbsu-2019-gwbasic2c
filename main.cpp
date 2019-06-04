@@ -1,7 +1,7 @@
 #include <iostream>
 #include <algorithm>
 #include <parser.h>
-#include "ast.h"
+#include "ast/program.h"
 
 int main(int argc, char* argv[]) {
     if (argc > 1) {

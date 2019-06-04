@@ -1,40 +1,10 @@
-#include <utility>
-#include "ast.h"
 #include <cassert>
+#include "node.h"
+#include "expression.h"
 #include "util.h"
 
 using namespace std;
 using namespace gw_logic;
-
-std::string ast::to_string(gw_logic::Type type) {
-    switch (type) {
-        case INT: return "INT";
-        case FLOAT: return "FLOAT";
-        case DOUBLE: return "DOUBLE";
-        case STRING: return "STRING";
-        case INT_REF: return "INT_REF";
-        case FLOAT_REF: return "FLOAT_REF";
-        case DOUBLE_REF: return "DOUBLE_REF";
-        case STRING_REF: return "STRING_REF";
-        case VOID: return "VOID";
-    }
-    assert(false);
-}
-
-ast::Printable::~Printable() = default;
-
-template <typename T>
-void ast::joinAndPrint(std::ostream& stream, const vector<T>& values, const std::string& separator) {
-    bool first = true;
-    for (auto& value : values) {
-        if (first) {
-            first = false;
-        } else {
-            stream << separator;
-        }
-        value->print(stream);
-    }
-}
 
 ast::Expression::Expression(Type type):
         type(type) { }
@@ -150,8 +120,8 @@ ast::FunctionExpression* ast::retrieveFunctionExpression(const string& name, vec
 }
 
 ast::CastedExpression::CastedExpression(const ast::Expression* expression, gw_logic::Type type):
-    Expression(type),
-    expression(expression) { }
+        Expression(type),
+        expression(expression) { }
 
 void ast::CastedExpression::print(std::ostream& stream) const {
     expression->print(stream);
@@ -237,31 +207,4 @@ std::vector<std::unique_ptr<ast::Expression>> ast::castOrThrow(std::vector<std::
         expression = std::unique_ptr<Expression>(castOrThrow(expression.release(), targetType));
     }
     return expressions;
-}
-
-ast::Statement::Statement(Expression* expression):
-        expression(expression) { }
-
-void ast::Statement::print(ostream& stream) const {
-    expression->print(stream);
-}
-
-ast::Line::Line(int lineNumber, vector<ast::Statement*>* statementList, char* comment):
-        lineNumber(lineNumber),
-        statementList(statementList),
-        comment(comment) { }
-
-void ast::Line::print(ostream& stream) const {
-    stream << "set_line(" << lineNumber << ");";
-
-    if (comment[0] != '\0') {
-        stream << " //" << comment;
-    }
-
-    stream << endl;
-
-    for (auto statement : *statementList) {
-        statement->print(stream);
-        stream << ';' << endl;
-    }
 }

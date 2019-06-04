@@ -4,7 +4,7 @@
 #include <string.h>
 #include <vector>
 #include <memory>
-#include <ast.h>
+#include <ast/program.h>
 
 extern int yylex(void);
 extern int yylineno;
