@@ -2,7 +2,7 @@
 #include "node.h"
 
 namespace ast {
-    class Expression: public Printable {
+    class Expression: public Node {
     public:
         const gw_logic::Type type;
         explicit Expression(gw_logic::Type type);
@@ -11,6 +11,7 @@ namespace ast {
     class ConstExpression: public Expression {
     public:
         ConstExpression(gw_logic::Type type, std::string&& valueToPrint);
+        void provideInfo(ProgramInfo& programInfo) const override;
         void print(std::ostream& stream) const override;
     private:
         std::string valueToPrint;
@@ -40,6 +41,10 @@ namespace ast {
     public:
         const std::string name;
         VariableExpression(std::string name, gw_logic::Type type);
+        std::string getPrintableType() const;
+        std::string getPrintableName() const;
+        std::string getPrintableDefaultValue() const;
+        void provideInfo(ProgramInfo& programInfo) const override;
         void print(std::ostream& stream) const override;
     };
 
@@ -48,6 +53,7 @@ namespace ast {
         const VariableExpression* variable;
         const std::vector<std::unique_ptr<Expression>> new_sizes;
         VectorDimExpression(const VariableExpression* variable, std::vector<std::unique_ptr<Expression>> new_sizes);
+        void provideInfo(ProgramInfo& programInfo) const override;
         void print(std::ostream& stream) const override;
     };
 
@@ -56,6 +62,7 @@ namespace ast {
         const VariableExpression* variable;
         const std::vector<std::unique_ptr<Expression>> indexes;
         VectorGetElementExpression(const VariableExpression* variable, std::vector<std::unique_ptr<Expression>> indexes);
+        void provideInfo(ProgramInfo& programInfo) const override;
         void print(std::ostream& stream) const override;
     };
 
@@ -64,6 +71,7 @@ namespace ast {
         const gw_logic::LogicFile* logicFile;
         const std::vector<const Expression*> argumentList;
         FunctionExpression(const gw_logic::LogicFile* logicFile, std::vector<const Expression*> argumentList);
+        void provideInfo(ProgramInfo& programInfo) const override;
         void print(std::ostream& stream) const override;
     };
 
@@ -73,6 +81,7 @@ namespace ast {
     public:
         const Expression* expression;
         CastedExpression(const Expression* expression, gw_logic::Type type);
+        void provideInfo(ProgramInfo& programInfo) const override;
         void print(std::ostream& stream) const override;
     };
 

@@ -13,6 +13,10 @@ ast::ConstExpression::ConstExpression(gw_logic::Type type, std::string&& valueTo
         Expression(type),
         valueToPrint(valueToPrint) { }
 
+void ast::ConstExpression::provideInfo(ast::ProgramInfo& programInfo) const {
+    // nothing to provide
+}
+
 void ast::ConstExpression::print(ostream& stream) const {
     stream << valueToPrint;
 }
@@ -35,8 +39,36 @@ ast::VariableExpression::VariableExpression(std::string name, gw_logic::Type typ
     assert(type == INT_REF || type == FLOAT_REF || type == DOUBLE_REF || type == STRING_REF);
 }
 
+std::string ast::VariableExpression::getPrintableType() const {
+    switch (type) {
+        case INT_REF: return "gw_int";
+        case FLOAT_REF: return "float";
+        case DOUBLE_REF: return "double";
+        case STRING_REF: return "std::string";
+        default: assert(false);
+    }
+}
+
+std::string ast::VariableExpression::getPrintableName() const {
+    switch (type) {
+        case INT_REF: return "_" + name + "_i";
+        case FLOAT_REF: return "_" + name + "_f";
+        case DOUBLE_REF: return "_" + name + "_d";
+        case STRING_REF: return "_" + name + "_s";
+        default: assert(false);
+    }
+}
+
+std::string ast::VariableExpression::getPrintableDefaultValue() const {
+    return type == STRING_REF ? "\"\"" : "0";
+}
+
+void ast::VariableExpression::provideInfo(ast::ProgramInfo& programInfo) const {
+    programInfo.variableDefinitions.insert(getPrintableType() + " " + getPrintableName() + " = " + getPrintableDefaultValue());
+}
+
 void ast::VariableExpression::print(ostream& stream) const {
-    stream << '_' << name;
+    stream << getPrintableName();
 }
 
 ast::VectorDimExpression::VectorDimExpression(const VariableExpression* variable, std::vector<std::unique_ptr<Expression>> new_sizes):
@@ -44,8 +76,17 @@ ast::VectorDimExpression::VectorDimExpression(const VariableExpression* variable
         variable(variable),
         new_sizes(castOrThrow(std::move(new_sizes), INT)) { }
 
+void ast::VectorDimExpression::provideInfo(ast::ProgramInfo& programInfo) const {
+    programInfo.variableDefinitions.insert("std::vector<" + variable->getPrintableType() + "> " + variable->getPrintableName() + "v = { }");
+    programInfo.variableDefinitions.insert("std::vector<gw_int> " + variable->getPrintableName() + "i = { }");
+    programInfo.coreFiles.insert(gw_logic::core_vector);
+    for (auto& child : new_sizes) {
+        child->provideInfo(programInfo);
+    }
+}
+
 void ast::VectorDimExpression::print(std::ostream& stream) const {
-    stream << "dim(_" << variable->name << "_v,_" << variable->name << "_s,{";
+    stream << "dim(" << variable->getPrintableName() << "v," << variable->getPrintableName() << "i,{";
     joinAndPrint(stream, new_sizes);
     stream << "})";
 }
@@ -55,8 +96,17 @@ ast::VectorGetElementExpression::VectorGetElementExpression(const VariableExpres
         variable(variable),
         indexes(castOrThrow(std::move(indexes), INT)) { }
 
+void ast::VectorGetElementExpression::provideInfo(ast::ProgramInfo& programInfo) const {
+    programInfo.variableDefinitions.insert("std::vector<" + variable->getPrintableType() + "> " + variable->getPrintableName() + "v = { }");
+    programInfo.variableDefinitions.insert("std::vector<gw_int> " + variable->getPrintableName() + "i = { }");
+    programInfo.coreFiles.insert(gw_logic::core_vector);
+    for (auto& child : indexes) {
+        child->provideInfo(programInfo);
+    }
+}
+
 void ast::VectorGetElementExpression::print(std::ostream& stream) const {
-    stream << "get(_" << variable->name << "_v,_" << variable->name << "_s,{";
+    stream << "get(" << variable->getPrintableName() << "v," << variable->getPrintableName() << "i,{";
     joinAndPrint(stream, indexes);
     stream << "})";
 }
@@ -65,6 +115,13 @@ ast::FunctionExpression::FunctionExpression(const LogicFile* logicFile, vector<c
         Expression(logicFile->returnType),
         logicFile(logicFile),
         argumentList(std::move(argumentList)) { }
+
+void ast::FunctionExpression::provideInfo(ast::ProgramInfo& programInfo) const {
+    programInfo.logicFiles.insert(logicFile);
+    for (auto& child : argumentList) {
+        child->provideInfo(programInfo);
+    }
+}
 
 void ast::FunctionExpression::print(ostream& stream) const {
     stream << logicFile->name << '(';
@@ -122,6 +179,10 @@ ast::FunctionExpression* ast::retrieveFunctionExpression(const string& name, vec
 ast::CastedExpression::CastedExpression(const ast::Expression* expression, gw_logic::Type type):
         Expression(type),
         expression(expression) { }
+
+void ast::CastedExpression::provideInfo(ast::ProgramInfo& programInfo) const {
+    expression->provideInfo(programInfo);
+}
 
 void ast::CastedExpression::print(std::ostream& stream) const {
     expression->print(stream);

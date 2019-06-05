@@ -1,3 +1,3 @@
-void let_f(float& pointer, float value) {
-    pointer = value;
+void let_f(float& ref, float value) {
+    ref = value;
 }

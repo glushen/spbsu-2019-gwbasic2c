@@ -24,17 +24,8 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void printLines(std::vector<ast::Line*>* lines) {
-    for (auto line : *lines) {
-        line->print(std::cout);
-    }
-}
-
 void handleResult(std::vector<ast::Line*>* lines) {
-    std::sort(lines->begin(), lines->end(), [](ast::Line* a, ast::Line* b) {
-        return a->lineNumber < b->lineNumber;
-    });
-    printLines(lines);
+    ast::printProgram(std::cout, lines);
 }
 
 void yyerror(const char *s, ...) {

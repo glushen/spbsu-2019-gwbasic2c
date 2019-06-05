@@ -21,4 +21,4 @@ std::string ast::to_string(gw_logic::Type type) {
     assert(false);
 }
 
-ast::Printable::~Printable() = default;
+ast::Node::~Node() = default;

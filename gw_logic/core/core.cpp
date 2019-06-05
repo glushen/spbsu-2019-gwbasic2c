@@ -25,7 +25,7 @@ void assert(bool condition, const char* message) {
         exit(EXIT_FAILURE);
     }
 }
-void set_line(int new_line_number) {
+void line(int new_line_number) {
     line_number = new_line_number;
     if (print_each_line_number) printf("[%d]", line_number);
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <set>
 #include <ostream>
 #include <memory>
 #include <gw_logic.h>
@@ -9,11 +10,19 @@
 namespace ast {
     std::string to_string(gw_logic::Type type);
 
-    class Printable {
+    class ProgramInfo {
     public:
+        std::set<std::string> variableDefinitions;
+        std::set<const gw_logic::CoreFile*> coreFiles;
+        std::set<const gw_logic::LogicFile*> logicFiles;
+    };
+
+    class Node {
+    public:
+        virtual void provideInfo(ProgramInfo& programInfo) const = 0;
         virtual void print(std::ostream& stream) const = 0;
     protected:
-        virtual ~Printable();
+        virtual ~Node();
     };
 
     template <typename T>
