@@ -1,27 +1,17 @@
+#include <utility>
 #include "program.h"
 
 using namespace std;
 using namespace gw_logic;
 
-ast::Statement::Statement(Expression* expression):
-        expression(expression) { }
-
-void ast::Statement::provideInfo(ast::ProgramInfo& programInfo) const {
-    expression->provideInfo(programInfo);
-}
-
-void ast::Statement::print(ostream& stream) const {
-    expression->print(stream);
-}
-
-ast::Line::Line(int lineNumber, vector<ast::Statement*>* statementList, char* comment):
+ast::Line::Line(int lineNumber, std::vector<std::unique_ptr<ast::Expression>> statementList, char* comment):
         lineNumber(lineNumber),
-        statementList(statementList),
+        statementList(std::move(statementList)),
         comment(comment) { }
 
 void ast::Line::provideInfo(ast::ProgramInfo& programInfo) const {
-    for (auto& child : *statementList) {
-        child->provideInfo(programInfo);
+    for (auto& statement : statementList) {
+        statement->provideInfo(programInfo);
     }
     programInfo.coreFiles.insert(gw_logic::core_core);
 }
@@ -35,7 +25,7 @@ void ast::Line::print(ostream& stream) const {
 
     stream << endl;
 
-    for (auto statement : *statementList) {
+    for (auto& statement : statementList) {
         stream << "    ";
         statement->print(stream);
         stream << ';' << endl;

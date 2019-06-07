@@ -23,9 +23,7 @@ template<typename T> T move_ptr(T* ptr) {
     char* comment;
     std::vector<ast::Line*>* line_list;
     ast::Line* line;
-    std::vector<ast::Statement*>* statementList;
     std::vector<std::unique_ptr<ast::Expression>>* expressionList;
-    ast::Statement* statement;
     char* name;
     ast::Expression* exp;
     ast::VariableExpression* variable;
@@ -47,8 +45,7 @@ template<typename T> T move_ptr(T* ptr) {
 %type <comment> OPTIONAL_COMMENT
 %type <line_list> PROGRAM LINE_LIST
 %type <line> LINE
-%type <statementList> STATEMENT_LIST NOT_EMPTY_STATEMENT_LIST
-%type <statement> STATEMENT
+%type <expressionList> STATEMENT_LIST NOT_EMPTY_STATEMENT_LIST
 %type <exp> EXP
 %type <expressionList> EXP_LIST NOT_EMPTY_EXP_LIST
 %type <exp> LVALUE
@@ -80,18 +77,15 @@ LINE_LIST:
 
 LINE:
     %empty                                      { $$ = nullptr; }
-|   LINE_NUMBER STATEMENT_LIST OPTIONAL_COMMENT { $$ = new ast::Line($1, $2, $3); }
+|   LINE_NUMBER STATEMENT_LIST OPTIONAL_COMMENT { $$ = new ast::Line($1, move_ptr($2), $3); }
 
 STATEMENT_LIST:
-    %empty                   { $$ = new std::vector<ast::Statement*>(); }
+    %empty                   { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); }
 |   NOT_EMPTY_STATEMENT_LIST { $$ = $1; }
 
 NOT_EMPTY_STATEMENT_LIST:
-    STATEMENT                               { $$ = new std::vector<ast::Statement*>(); $$->push_back($1); }
-|   NOT_EMPTY_STATEMENT_LIST ':' STATEMENT  { $$ = $1; $$->push_back($3); }
-
-STATEMENT:
-    EXP     { $$ = new ast::Statement($1); }
+    EXP                               { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->push_back(std::unique_ptr<ast::Expression>($1)); }
+|   NOT_EMPTY_STATEMENT_LIST ':' EXP  { $$ = $1; $$->push_back(std::unique_ptr<ast::Expression>($3)); }
 
 OPTIONAL_COMMENT:
     %empty           { $$ = strdup(""); }
