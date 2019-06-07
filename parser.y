@@ -140,5 +140,6 @@ EXP:
 |   EXP XOR_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("xor", move_vector<ast::Expression>({$1, $3})).release(); }
 |   EXP EQV_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("eqv", move_vector<ast::Expression>({$1, $3})).release(); }
 |   EXP IMP_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("imp", move_vector<ast::Expression>({$1, $3})).release(); }
+|   GW_FN_NAME '(' EXP_LIST ')'     { $$ = ast::retrieveFunctionExpression(move_ptr($1), move_ptr($3)).release(); }
 |   OPTIONAL_LET_KEYWORD LVALUE EQUAL_OPERATOR EXP  { $$ = ast::retrieveFunctionExpression("let", move_vector<ast::Expression>({$2, $4})).release(); }
 |   DIM_KEYWORD VARIABLE '(' EXP_LIST ')'  { $$ = new ast::VectorDimExpression(move_ptr($2), move_ptr($4)); }
