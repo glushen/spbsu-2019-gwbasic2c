@@ -11,7 +11,7 @@ VAR_NAME        ([a-z][a-z0-9\.]*)
 
 %%
 
-\'.+            { yylval.comment = strdup(yytext+1); return COMMENT; }
+\'.+            { yylval.comment = new std::string(yytext+1); return COMMENT; }
 ^\ *[0-9]{1,5}  { yylval.line_number = atoi(yytext); return LINE_NUMBER; }
 
 \"[^\"]*\"      { yylval.exp = new ast::StringConstExpression(std::string(yytext+1, yyleng-2)); return CONST; }
@@ -55,25 +55,25 @@ LET  { return LET_KEYWORD; }
 DIM  { return DIM_KEYWORD; }
 
 CSRLIN|DATE$|TIME$|ENVIRON\$|ERDEV|ERDEV\$|ERR|ERL|INKEY$ {
-    yylval.name = strndup(yytext, yyleng); return UNSUPPORTED_VAR;
+    yylval.name = new std::string(yytext, yyleng); return UNSUPPORTED_VAR;
 }
 EXTERR|FRE|INP|IOCTL\$|LPOS|PEEK|PEN|PLAY|PMAP|POINT|POS|SCREEN|STICK|TAB|TIMER|USR|VARPTR|VARPTR\$ {
-    yylval.name = strdup(yytext); return GW_FN_NAME_UNSUPPORTED;
+    yylval.name = new std::string(yytext); return GW_FN_NAME_UNSUPPORTED;
 }
 ABS|ASC|ATN|CDBL|CHR\$|CINT|COS|CSNG|CVD|CVI|CVS|EOF|EXP|FIX|HEX\$|INPUT\$|INSTR|INT|LEFT\$|LEN|LOC|LOF|LOG|MID\$|MKD\$|MKI\$|MKS\$|OCT\$|RIGHT\$|RND|SGN|SIN|SPACE\$|SPC|SQR|STR\$|STRING\$|TAN|VAL {
-    yylval.name = strdup(yytext); return GW_FN_NAME;
+    yylval.name = new std::string(yytext); return GW_FN_NAME;
 }
 AUTO|BLOAD|BSAVE|CHDIR|CONT|DELETE|EDIT|FILES|LIST|LLIST|LOAD|MERGE|MKDIR|KILL|NEW|PCOPY|RUN|SAVE|SYSTEM {
-    yylval.name = strdup(yytext); return GW_CMD_NAME_UNSUPPORTED;
+    yylval.name = new std::string(yytext); return GW_CMD_NAME_UNSUPPORTED;
 }
 CLEAR|NAME|RENUM|RESET|RMDIR|TROFF|TRON {
-    yylval.name = strdup(yytext); return GW_CMD_NAME;
+    yylval.name = new std::string(yytext); return GW_CMD_NAME;
 }
 BEEP|CALL|CHAIN|CIRCLE|CLS|COLOR|COM|COMMON|DEFINT|DEFDBL|DEFSNG|DEFSTR|DEF\ +SEG|DEF\ +USR|DRAW|ENVIRON|ERROR|FIELD|GET|IOCTL|KEY|LINE|LINE\ +INPUT|LINE\ +INPUT\#|LOCATE|LOCK|LPRINT|LPRINT\ +USING|LSET|ON\ +COM|ON\ +KEY|ON\ +PEN|ON\ +PLAY|ON\ +STRIG|ON\ +TIMER|ON\ +ERROR\ +GOTO|OPEN\ +\"COM|OPTION\ +BASE|OUT|PAINT|PALETTE|PALETTE\ +USING|PEN|PLAY|POKE|PRESET|PSET|PRINT\ +USING|PRINT\#|PRINT\#\ +USING|PUT|RSET|SCREEN|SHELL|SOUND|STRIG|TIME\$|UNLOCK|VIEW|VIEW\ +PRINT|WAIT|WIDTH|WINDOW {
-    yylval.name = strdup(yytext); return GW_STM_NAME_UNSUPPORTED;
+    yylval.name = new std::string(yytext); return GW_STM_NAME_UNSUPPORTED;
 }
 CLOSE|DATA|DATE\$|DEF\ +FN|DIM|END|ERASE|FOR|GOSUB\-RETURN|GOTO|IF|INPUT|INPUT\#|LET|MID\$|NEXT|ON\-GOSUB|ON\-GOTO|OPEN|PRINT|RANDOMIZE|READ|REM|RESTORE|RESUME|RETURN|STOP|SWAP|WHILE\-WEND|WRITE|WRITE\# {
-    yylval.name = strdup(yytext); return GW_STM_NAME;
+    yylval.name = new std::string(yytext); return GW_STM_NAME;
 }
 
 \^|\*|\/|\\|\+|\-|\(|\)  { return yytext[0]; }
@@ -93,7 +93,7 @@ XOR  { return XOR_OPERATOR; }
 EQV  { return EQV_OPERATOR; }
 IMP  { return IMP_OPERATOR; }
 
-{FN_NAME}       { yylval.name = strndup(yytext, yyleng); return FN_VAR; }
+{FN_NAME}       { yylval.name = new std::string(yytext, yyleng); return FN_VAR; }
 {VAR_NAME}      { yylval.exp = new ast::VariableExpression(std::string(yytext, yyleng), gw_logic::FLOAT_REF); return VARIABLE; }
 {VAR_NAME}\!    { yylval.exp = new ast::VariableExpression(std::string(yytext, yyleng-1), gw_logic::FLOAT_REF); return VARIABLE; }
 {VAR_NAME}\%    { yylval.exp = new ast::VariableExpression(std::string(yytext, yyleng-1), gw_logic::INT_REF); return VARIABLE; }

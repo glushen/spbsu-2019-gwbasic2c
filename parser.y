@@ -9,22 +9,32 @@
 extern int yylex(void);
 extern int yylineno;
 void yyerror(const char *s, ...);
-void handleResult(std::vector<ast::Line*>* line_list);
+void handleResult(std::vector<ast::Line> lines);
 
 template<typename T> T move_ptr(T* ptr) {
-    T value = move(*ptr);
+    T value = std::move(*ptr);
     delete ptr;
     return value;
+}
+template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*> vector) {
+    std::vector<std::unique_ptr<T>> result;
+    result.reserve(vector.size());
+
+    for (auto& item : vector) {
+        result.push_back(std::unique_ptr<T>(item));
+    }
+
+    return result;
 }
 }
 
 %union {
     int line_number;
-    char* comment;
-    std::vector<ast::Line*>* line_list;
+    std::string* comment;
+    std::vector<ast::Line>* lines;
     ast::Line* line;
-    std::vector<std::unique_ptr<ast::Expression>>* expressionList;
-    char* name;
+    std::vector<std::unique_ptr<ast::Expression>>* expressions;
+    std::string* name;
     ast::Expression* exp;
     ast::VariableExpression* variable;
 }
@@ -43,11 +53,11 @@ template<typename T> T move_ptr(T* ptr) {
 %token END_OF_FILE
 
 %type <comment> OPTIONAL_COMMENT
-%type <line_list> PROGRAM LINE_LIST
+%type <lines> PROGRAM LINE_LIST
 %type <line> LINE
-%type <expressionList> STATEMENT_LIST NOT_EMPTY_STATEMENT_LIST
+%type <expressions> STATEMENT_LIST NOT_EMPTY_STATEMENT_LIST
 %type <exp> EXP
-%type <expressionList> EXP_LIST NOT_EMPTY_EXP_LIST
+%type <expressions> EXP_LIST NOT_EMPTY_EXP_LIST
 %type <exp> LVALUE
 
 %left IMP_OPERATOR
@@ -69,15 +79,15 @@ template<typename T> T move_ptr(T* ptr) {
 %%
 
 PROGRAM:
-    LINE_LIST END_OF_FILE { $$ = $1; handleResult($$); YYACCEPT; }
+    LINE_LIST END_OF_FILE { $$ = $1; handleResult(move_ptr($$)); YYACCEPT; }
 
 LINE_LIST:
-    LINE                { $$ = new std::vector<ast::Line*>(); if ($1 != nullptr) $$->push_back($1); }
-|   LINE_LIST '\n' LINE { $$ = $1; if ($3 != nullptr) $$->push_back($3); }
+    LINE                { $$ = new std::vector<ast::Line>(); if ($1 != nullptr) $$->push_back(move_ptr($1)); }
+|   LINE_LIST '\n' LINE { $$ = $1; if ($3 != nullptr) $$->push_back(move_ptr($3)); }
 
 LINE:
     %empty                                      { $$ = nullptr; }
-|   LINE_NUMBER STATEMENT_LIST OPTIONAL_COMMENT { $$ = new ast::Line($1, move_ptr($2), $3); }
+|   LINE_NUMBER STATEMENT_LIST OPTIONAL_COMMENT { $$ = new ast::Line($1, move_ptr($2), move_ptr($3)); }
 
 STATEMENT_LIST:
     %empty                   { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); }
@@ -88,7 +98,7 @@ NOT_EMPTY_STATEMENT_LIST:
 |   NOT_EMPTY_STATEMENT_LIST ':' EXP  { $$ = $1; $$->push_back(std::unique_ptr<ast::Expression>($3)); }
 
 OPTIONAL_COMMENT:
-    %empty           { $$ = strdup(""); }
+    %empty           { $$ = new std::string(); }
 |   COMMENT          { $$ = $1; }
 
 OPTIONAL_LET_KEYWORD:
@@ -105,30 +115,30 @@ NOT_EMPTY_EXP_LIST:
 
 LVALUE:
     VARIABLE                   { $$ = $1; }
-|   VARIABLE '(' EXP_LIST ')'  { $$ = new ast::VectorGetElementExpression($1, move_ptr($3)); }
+|   VARIABLE '(' EXP_LIST ')'  { $$ = new ast::VectorGetElementExpression(move_ptr($1), move_ptr($3)); }
 
 EXP:
     CONST                      { $$ = $1; }
 |   '(' EXP ')'                { $$ = $2; }
-|   EXP '^' EXP                { $$ = ast::retrieveFunctionExpression("pow", {$1, $3}); }
-|   '-' EXP %prec UNARY_MINUS  { $$ = ast::retrieveFunctionExpression("neg", {$2}); }
-|   EXP '*' EXP                { $$ = ast::retrieveFunctionExpression("mul", {$1, $3}); }
-|   EXP '/' EXP                { $$ = ast::retrieveFunctionExpression("fdiv", {$1, $3}); }
-|   EXP '\\' EXP               { $$ = ast::retrieveFunctionExpression("idiv", {$1, $3}); }
-|   EXP MOD_OPERATOR EXP       { $$ = ast::retrieveFunctionExpression("mod", {$1, $3}); }
-|   EXP '+' EXP                { $$ = ast::retrieveFunctionExpression("sum", {$1, $3}); }
-|   EXP '-' EXP                { $$ = ast::retrieveFunctionExpression("sub", {$1, $3}); }
-|   EXP EQUAL_OPERATOR EXP          { $$ = ast::retrieveFunctionExpression("equal", {$1, $3}); }
-|   EXP UNEQUAL_OPERATOR EXP        { $$ = ast::retrieveFunctionExpression("unequal", {$1, $3}); }
-|   EXP LESS_OPERATOR EXP           { $$ = ast::retrieveFunctionExpression("less", {$1, $3}); }
-|   EXP GREATER_OPERATOR EXP        { $$ = ast::retrieveFunctionExpression("greater", {$1, $3}); }
-|   EXP LESS_EQUAL_OPERATOR EXP     { $$ = ast::retrieveFunctionExpression("geq", {$1, $3}); }
-|   EXP GREATER_EQUAL_OPERATOR EXP  { $$ = ast::retrieveFunctionExpression("leq", {$1, $3}); }
-|   NOT_OPERATOR EXP                { $$ = ast::retrieveFunctionExpression("not", {$2}); }
-|   EXP AND_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("and", {$1, $3}); }
-|   EXP OR_OPERATOR EXP             { $$ = ast::retrieveFunctionExpression("or", {$1, $3}); }
-|   EXP XOR_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("xor", {$1, $3}); }
-|   EXP EQV_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("eqv", {$1, $3}); }
-|   EXP IMP_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("imp", {$1, $3}); }
-|   OPTIONAL_LET_KEYWORD LVALUE EQUAL_OPERATOR EXP  { $$ = ast::retrieveFunctionExpression("let", {$2, $4}); }
-|   DIM_KEYWORD VARIABLE '(' EXP_LIST ')'  { $$ = new ast::VectorDimExpression($2, move_ptr($4)); }
+|   EXP '^' EXP                { $$ = ast::retrieveFunctionExpression("pow", move_vector<ast::Expression>({$1, $3})).release(); }
+|   '-' EXP %prec UNARY_MINUS  { $$ = ast::retrieveFunctionExpression("neg", move_vector<ast::Expression>({$2})).release(); }
+|   EXP '*' EXP                { $$ = ast::retrieveFunctionExpression("mul", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP '/' EXP                { $$ = ast::retrieveFunctionExpression("fdiv", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP '\\' EXP               { $$ = ast::retrieveFunctionExpression("idiv", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP MOD_OPERATOR EXP       { $$ = ast::retrieveFunctionExpression("mod", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP '+' EXP                { $$ = ast::retrieveFunctionExpression("sum", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP '-' EXP                { $$ = ast::retrieveFunctionExpression("sub", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP EQUAL_OPERATOR EXP          { $$ = ast::retrieveFunctionExpression("equal", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP UNEQUAL_OPERATOR EXP        { $$ = ast::retrieveFunctionExpression("unequal", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP LESS_OPERATOR EXP           { $$ = ast::retrieveFunctionExpression("less", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP GREATER_OPERATOR EXP        { $$ = ast::retrieveFunctionExpression("greater", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP LESS_EQUAL_OPERATOR EXP     { $$ = ast::retrieveFunctionExpression("geq", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP GREATER_EQUAL_OPERATOR EXP  { $$ = ast::retrieveFunctionExpression("leq", move_vector<ast::Expression>({$1, $3})).release(); }
+|   NOT_OPERATOR EXP                { $$ = ast::retrieveFunctionExpression("not", move_vector<ast::Expression>({$2})).release(); }
+|   EXP AND_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("and", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP OR_OPERATOR EXP             { $$ = ast::retrieveFunctionExpression("or", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP XOR_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("xor", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP EQV_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("eqv", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP IMP_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("imp", move_vector<ast::Expression>({$1, $3})).release(); }
+|   OPTIONAL_LET_KEYWORD LVALUE EQUAL_OPERATOR EXP  { $$ = ast::retrieveFunctionExpression("let", move_vector<ast::Expression>({$2, $4})).release(); }
+|   DIM_KEYWORD VARIABLE '(' EXP_LIST ')'  { $$ = new ast::VectorDimExpression(move_ptr($2), move_ptr($4)); }

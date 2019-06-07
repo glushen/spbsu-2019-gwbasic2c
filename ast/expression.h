@@ -50,18 +50,18 @@ namespace ast {
 
     class VectorDimExpression: public Expression {
     public:
-        const VariableExpression* variable;
+        const VariableExpression variable;
         const std::vector<std::unique_ptr<Expression>> new_sizes;
-        VectorDimExpression(const VariableExpression* variable, std::vector<std::unique_ptr<Expression>> new_sizes);
+        VectorDimExpression(VariableExpression variable, std::vector<std::unique_ptr<Expression>> new_sizes);
         void provideInfo(ProgramInfo& programInfo) const override;
         void print(std::ostream& stream) const override;
     };
 
     class VectorGetElementExpression: public Expression {
     public:
-        const VariableExpression* variable;
+        const VariableExpression variable;
         const std::vector<std::unique_ptr<Expression>> indexes;
-        VectorGetElementExpression(const VariableExpression* variable, std::vector<std::unique_ptr<Expression>> indexes);
+        VectorGetElementExpression(VariableExpression variable, std::vector<std::unique_ptr<Expression>> indexes);
         void provideInfo(ProgramInfo& programInfo) const override;
         void print(std::ostream& stream) const override;
     };
@@ -69,24 +69,24 @@ namespace ast {
     class FunctionExpression: public Expression {
     public:
         const gw_logic::LogicFile* logicFile;
-        const std::vector<const Expression*> argumentList;
-        FunctionExpression(const gw_logic::LogicFile* logicFile, std::vector<const Expression*> argumentList);
+        const std::vector<std::unique_ptr<Expression>> argumentList;
+        FunctionExpression(const gw_logic::LogicFile* logicFile, std::vector<std::unique_ptr<Expression>> argumentList);
         void provideInfo(ProgramInfo& programInfo) const override;
         void print(std::ostream& stream) const override;
     };
 
-    FunctionExpression* retrieveFunctionExpression(const std::string& name, std::vector<const Expression*> argumentList);
+    std::unique_ptr<FunctionExpression> retrieveFunctionExpression(const std::string& name, std::vector<std::unique_ptr<Expression>> argumentList);
 
     class CastedExpression: public Expression {
     public:
-        const Expression* expression;
-        CastedExpression(const Expression* expression, gw_logic::Type type);
+        const std::unique_ptr<Expression> expression;
+        CastedExpression(std::unique_ptr<Expression> expression, gw_logic::Type type);
         void provideInfo(ProgramInfo& programInfo) const override;
         void print(std::ostream& stream) const override;
     };
 
     bool castableImplicitly(gw_logic::Type sourceType, gw_logic::Type targetType);
     bool castableExplicitly(gw_logic::Type sourceType, gw_logic::Type targetType);
-    Expression* castOrThrow(const Expression* expression, gw_logic::Type targetType);
+    std::unique_ptr<Expression> castOrThrow(std::unique_ptr<Expression> expression, gw_logic::Type targetType);
     std::vector<std::unique_ptr<Expression>> castOrThrow(std::vector<std::unique_ptr<Expression>> expression, gw_logic::Type targetType);
 }

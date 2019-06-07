@@ -1,3 +1,4 @@
+#include <memory>
 #include <cassert>
 #include "node.h"
 #include "expression.h"
@@ -71,14 +72,14 @@ void ast::VariableExpression::print(ostream& stream) const {
     stream << getPrintableName();
 }
 
-ast::VectorDimExpression::VectorDimExpression(const VariableExpression* variable, std::vector<std::unique_ptr<Expression>> new_sizes):
+ast::VectorDimExpression::VectorDimExpression(VariableExpression variable, std::vector<std::unique_ptr<Expression>> new_sizes):
         Expression(VOID),
-        variable(variable),
+        variable(std::move(variable)),
         new_sizes(castOrThrow(std::move(new_sizes), INT)) { }
 
 void ast::VectorDimExpression::provideInfo(ast::ProgramInfo& programInfo) const {
-    programInfo.variableDefinitions.insert("std::vector<" + variable->getPrintableType() + "> " + variable->getPrintableName() + "v = { }");
-    programInfo.variableDefinitions.insert("std::vector<gw_int> " + variable->getPrintableName() + "i = { }");
+    programInfo.variableDefinitions.insert("std::vector<" + variable.getPrintableType() + "> " + variable.getPrintableName() + "v = { }");
+    programInfo.variableDefinitions.insert("std::vector<gw_int> " + variable.getPrintableName() + "i = { }");
     programInfo.coreFiles.insert(gw_logic::core_vector);
     for (auto& child : new_sizes) {
         child->provideInfo(programInfo);
@@ -86,19 +87,19 @@ void ast::VectorDimExpression::provideInfo(ast::ProgramInfo& programInfo) const 
 }
 
 void ast::VectorDimExpression::print(std::ostream& stream) const {
-    stream << "dim(" << variable->getPrintableName() << "v," << variable->getPrintableName() << "i,{";
+    stream << "dim(" << variable.getPrintableName() << "v," << variable.getPrintableName() << "i,{";
     joinAndPrint(stream, new_sizes);
     stream << "})";
 }
 
-ast::VectorGetElementExpression::VectorGetElementExpression(const VariableExpression* variable, std::vector<std::unique_ptr<Expression>> indexes):
-        Expression(variable->type),
-        variable(variable),
+ast::VectorGetElementExpression::VectorGetElementExpression(VariableExpression variable, std::vector<std::unique_ptr<Expression>> indexes):
+        Expression(variable.type),
+        variable(std::move(variable)),
         indexes(castOrThrow(std::move(indexes), INT)) { }
 
 void ast::VectorGetElementExpression::provideInfo(ast::ProgramInfo& programInfo) const {
-    programInfo.variableDefinitions.insert("std::vector<" + variable->getPrintableType() + "> " + variable->getPrintableName() + "v = { }");
-    programInfo.variableDefinitions.insert("std::vector<gw_int> " + variable->getPrintableName() + "i = { }");
+    programInfo.variableDefinitions.insert("std::vector<" + variable.getPrintableType() + "> " + variable.getPrintableName() + "v = { }");
+    programInfo.variableDefinitions.insert("std::vector<gw_int> " + variable.getPrintableName() + "i = { }");
     programInfo.coreFiles.insert(gw_logic::core_vector);
     for (auto& child : indexes) {
         child->provideInfo(programInfo);
@@ -106,12 +107,12 @@ void ast::VectorGetElementExpression::provideInfo(ast::ProgramInfo& programInfo)
 }
 
 void ast::VectorGetElementExpression::print(std::ostream& stream) const {
-    stream << "get(" << variable->getPrintableName() << "v," << variable->getPrintableName() << "i,{";
+    stream << "get(" << variable.getPrintableName() << "v," << variable.getPrintableName() << "i,{";
     joinAndPrint(stream, indexes);
     stream << "})";
 }
 
-ast::FunctionExpression::FunctionExpression(const LogicFile* logicFile, vector<const Expression*> argumentList):
+ast::FunctionExpression::FunctionExpression(const LogicFile* logicFile, std::vector<std::unique_ptr<Expression>> argumentList):
         Expression(logicFile->returnType),
         logicFile(logicFile),
         argumentList(std::move(argumentList)) { }
@@ -129,7 +130,7 @@ void ast::FunctionExpression::print(ostream& stream) const {
     stream << ')';
 }
 
-ast::FunctionExpression* ast::retrieveFunctionExpression(const string& name, vector<const Expression*> argumentList) {
+std::unique_ptr<ast::FunctionExpression> ast::retrieveFunctionExpression(const string& name, vector<unique_ptr<Expression>> argumentList) {
     if (LOGIC_FILES_BY_GW_FUNCTION_NAME.count(name) == 0) {
         throw std::invalid_argument("Function " + name + " is not found");
     }
@@ -157,7 +158,7 @@ ast::FunctionExpression* ast::retrieveFunctionExpression(const string& name, vec
         }
 
         if (logicFileIsCorrect) {
-            return new FunctionExpression(logicFile, std::move(argumentList));
+            return std::make_unique<FunctionExpression>(logicFile, std::move(argumentList));
         }
 
         if (logicFileIsCorrectable) {
@@ -167,18 +168,18 @@ ast::FunctionExpression* ast::retrieveFunctionExpression(const string& name, vec
 
     if (correctableLogicFile != nullptr) {
         for (int i = 0; i < argumentList.size(); i++) {
-            argumentList[i] = castOrThrow(argumentList[i], correctableLogicFile->argumentTypeList[i]);
+            argumentList[i] = castOrThrow(std::move(argumentList[i]), correctableLogicFile->argumentTypeList[i]);
         }
 
-        return new FunctionExpression(correctableLogicFile, std::move(argumentList));
+        return std::make_unique<ast::FunctionExpression>(correctableLogicFile, std::move(argumentList));
     }
 
     throw std::invalid_argument("Function " + name + " with required signature is not found");
 }
 
-ast::CastedExpression::CastedExpression(const ast::Expression* expression, gw_logic::Type type):
+ast::CastedExpression::CastedExpression(std::unique_ptr<Expression> expression, gw_logic::Type type):
         Expression(type),
-        expression(expression) { }
+        expression(std::move(expression)) { }
 
 void ast::CastedExpression::provideInfo(ast::ProgramInfo& programInfo) const {
     expression->provideInfo(programInfo);
@@ -246,18 +247,25 @@ bool ast::castableExplicitly(gw_logic::Type sourceType, gw_logic::Type targetTyp
     }
 }
 
-ast::Expression* ast::castOrThrow(const ast::Expression* expression, gw_logic::Type targetType) {
+std::unique_ptr<ast::Expression> ast::castOrThrow(std::unique_ptr<ast::Expression> expression, gw_logic::Type targetType) {
     if (castableImplicitly(expression->type, targetType)) {
-        return new CastedExpression(expression, targetType);
+        return std::unique_ptr<ast::Expression>(new CastedExpression(std::move(expression), targetType));
     } else if (castableExplicitly(expression->type, targetType)) {
+        string functionName;
         switch (targetType) {
             case INT:
-                return retrieveFunctionExpression("cint", {expression});
+                functionName = "cint";
+                break;
             case FLOAT:
-                return retrieveFunctionExpression("csng", {expression});
+                functionName = "csng";
+                break;
             default:
                 assert(false);
+                break;
         }
+        vector<unique_ptr<Expression>> argumentList;
+        argumentList.push_back(std::move(expression));
+        return std::move(retrieveFunctionExpression(functionName, std::move(argumentList)));
     } else {
         throw std::invalid_argument("Cannot cast " + to_string(expression->type) + " to " + to_string(targetType));
     }
@@ -265,7 +273,7 @@ ast::Expression* ast::castOrThrow(const ast::Expression* expression, gw_logic::T
 
 std::vector<std::unique_ptr<ast::Expression>> ast::castOrThrow(std::vector<std::unique_ptr<Expression>> expressions, gw_logic::Type targetType) {
     for (auto& expression : expressions) {
-        expression = std::unique_ptr<Expression>(castOrThrow(expression.release(), targetType));
+        expression = std::unique_ptr<Expression>(castOrThrow(std::move(expression), targetType));
     }
     return expressions;
 }

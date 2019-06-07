@@ -4,10 +4,10 @@
 using namespace std;
 using namespace gw_logic;
 
-ast::Line::Line(int lineNumber, std::vector<std::unique_ptr<ast::Expression>> statementList, char* comment):
+ast::Line::Line(int lineNumber, std::vector<std::unique_ptr<ast::Expression>> statementList, std::string comment):
         lineNumber(lineNumber),
         statementList(std::move(statementList)),
-        comment(comment) { }
+        comment(std::move(comment)) { }
 
 void ast::Line::provideInfo(ast::ProgramInfo& programInfo) const {
     for (auto& statement : statementList) {
@@ -66,15 +66,15 @@ void ast::printLogicFile(std::ostream& stream,
     stream << logicFile->code << endl;
 }
 
-void ast::printProgram(std::ostream& stream, std::vector<ast::Line*>* lines) {
-    std::sort(lines->begin(), lines->end(), [](ast::Line* a, ast::Line* b) {
-        return a->lineNumber < b->lineNumber;
+void ast::printProgram(std::ostream& stream, std::vector<ast::Line> lines) {
+    std::sort(lines.begin(), lines.end(), [](ast::Line& a, ast::Line& b) {
+        return a.lineNumber < b.lineNumber;
     });
 
     ProgramInfo programInfo;
 
-    for (auto line : *lines) {
-        line->provideInfo(programInfo);
+    for (auto& line : lines) {
+        line.provideInfo(programInfo);
     }
 
     std::set<const gw_logic::CoreFile*> printedCoreFiles;
@@ -97,8 +97,8 @@ void ast::printProgram(std::ostream& stream, std::vector<ast::Line*>* lines) {
 
     stream << "int main() {" << endl;
 
-    for (auto line : *lines) {
-        line->print(stream);
+    for (auto& line : lines) {
+        line.print(stream);
     }
 
     stream << "}" << endl;
