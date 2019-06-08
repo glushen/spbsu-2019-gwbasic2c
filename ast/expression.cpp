@@ -249,7 +249,7 @@ bool ast::castableExplicitly(gw_logic::Type sourceType, gw_logic::Type targetTyp
 
 std::unique_ptr<ast::Expression> ast::castOrThrow(std::unique_ptr<ast::Expression> expression, gw_logic::Type targetType) {
     if (castableImplicitly(expression->type, targetType)) {
-        return std::unique_ptr<ast::Expression>(new CastedExpression(std::move(expression), targetType));
+        return std::make_unique<CastedExpression>(std::move(expression), targetType);
     } else if (castableExplicitly(expression->type, targetType)) {
         string functionName;
         switch (targetType) {
@@ -273,7 +273,49 @@ std::unique_ptr<ast::Expression> ast::castOrThrow(std::unique_ptr<ast::Expressio
 
 std::vector<std::unique_ptr<ast::Expression>> ast::castOrThrow(std::vector<std::unique_ptr<Expression>> expressions, gw_logic::Type targetType) {
     for (auto& expression : expressions) {
-        expression = std::unique_ptr<Expression>(castOrThrow(std::move(expression), targetType));
+        expression = castOrThrow(std::move(expression), targetType);
     }
     return expressions;
+}
+
+unique_ptr<ast::Expression> ast::convertToString(unique_ptr<ast::Expression> expression) {
+    if (expression->type == STRING || expression->type == STRING_REF) {
+        return std::make_unique<CastedExpression>(std::move(expression), STRING);
+    } else {
+        vector<unique_ptr<Expression>> arguments;
+        arguments.push_back(move(expression));
+        return ast::retrieveFunctionExpression("str$", move(arguments));
+    }
+}
+
+ast::PrintExpression::PrintExpression():
+        Expression(VOID),
+        newLineExpression("\n") { }
+
+void ast::PrintExpression::provideInfo(ast::ProgramInfo& programInfo) const {
+    for (auto& expression : expressions) {
+        expression->provideInfo(programInfo);
+    }
+    programInfo.coreFiles.insert(gw_logic::core_print);
+    if (printNewLine) {
+        newLineExpression.provideInfo(programInfo);
+    }
+}
+
+void ast::PrintExpression::print(std::ostream& stream) const {
+    stream << "print({";
+    joinAndPrint(stream, expressions);
+
+    if (printNewLine) {
+        if (!expressions.empty()) {
+            stream << ',';
+        }
+        newLineExpression.print(stream);
+    }
+
+    stream << "})";
+}
+
+void ast::PrintExpression::addExpression(unique_ptr<ast::Expression> expression) {
+    expressions.push_back(convertToString(move(expression)));
 }

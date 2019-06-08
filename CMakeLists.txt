@@ -25,7 +25,9 @@ set(gw_logic_parser_arguments -core ${gw_logic_core_files}
 add_custom_command(COMMAND gw_logic_parser ${gw_logic_parser_arguments}
                    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/gw_logic.h ${CMAKE_CURRENT_BINARY_DIR}/gw_logic.cpp)
 
-bison_target(parser parser.y ${CMAKE_CURRENT_BINARY_DIR}/parser.cpp DEFINES_FILE ${CMAKE_CURRENT_BINARY_DIR}/parser.h)
+bison_target(parser parser.y ${CMAKE_CURRENT_BINARY_DIR}/parser.cpp
+             DEFINES_FILE ${CMAKE_CURRENT_BINARY_DIR}/parser.h
+             VERBOSE REPORT_FILE ${CMAKE_CURRENT_BINARY_DIR}/parser-report.txt)
 flex_target(lexer lexer.l ${CMAKE_CURRENT_BINARY_DIR}/lexer.cpp)
 add_flex_bison_dependency(lexer parser)
 add_executable(gwbasic2c

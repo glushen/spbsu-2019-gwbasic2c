@@ -37,6 +37,7 @@ template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*>
     std::string* name;
     ast::Expression* exp;
     ast::VariableExpression* variable;
+    ast::PrintExpression* printExp;
 }
 
 %token <exp> CONST
@@ -44,7 +45,7 @@ template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*>
 %token <name> GW_FN_NAME_UNSUPPORTED GW_CMD_NAME_UNSUPPORTED GW_STM_NAME_UNSUPPORTED
 %token <name> GW_FN_NAME GW_CMD_NAME GW_STM_NAME
 %token <name> FN_VAR UNSUPPORTED_VAR
-%token LET_KEYWORD DIM_KEYWORD TRON_KEYWORD TROFF_KEYWORD
+%token LET_KEYWORD DIM_KEYWORD TRON_KEYWORD TROFF_KEYWORD PRINT_KEYWORD
 %token MOD_OPERATOR
 %token EQUAL_OPERATOR UNEQUAL_OPERATOR LESS_OPERATOR GREATER_OPERATOR LESS_EQUAL_OPERATOR GREATER_EQUAL_OPERATOR
 %token NOT_OPERATOR AND_OPERATOR OR_OPERATOR XOR_OPERATOR EQV_OPERATOR IMP_OPERATOR
@@ -56,10 +57,12 @@ template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*>
 %type <lines> PROGRAM LINE_LIST
 %type <line> LINE
 %type <expressions> STATEMENT_LIST NOT_EMPTY_STATEMENT_LIST
-%type <exp> EXP
+%type <exp> EXP STATEMENT
 %type <expressions> EXP_LIST NOT_EMPTY_EXP_LIST
 %type <exp> LVALUE
+%type <printExp> PRINT_LIST
 
+%nonassoc PRINT_KEYWORD
 %left IMP_OPERATOR
 %left EQV_OPERATOR
 %left XOR_OPERATOR
@@ -67,6 +70,7 @@ template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*>
 %left AND_OPERATOR
 %nonassoc NOT_OPERATOR
 %left EQUAL_OPERATOR UNEQUAL_OPERATOR LESS_OPERATOR GREATER_OPERATOR LESS_EQUAL_OPERATOR GREATER_EQUAL_OPERATOR
+%nonassoc LOWER_THAN_MINUS
 %left '-'
 %left '+'
 %left MOD_OPERATOR
@@ -94,8 +98,8 @@ STATEMENT_LIST:
 |   NOT_EMPTY_STATEMENT_LIST { $$ = $1; }
 
 NOT_EMPTY_STATEMENT_LIST:
-    EXP                               { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->push_back(std::unique_ptr<ast::Expression>($1)); }
-|   NOT_EMPTY_STATEMENT_LIST ':' EXP  { $$ = $1; $$->push_back(std::unique_ptr<ast::Expression>($3)); }
+    STATEMENT                               { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->push_back(std::unique_ptr<ast::Expression>($1)); }
+|   NOT_EMPTY_STATEMENT_LIST ':' STATEMENT  { $$ = $1; $$->push_back(std::unique_ptr<ast::Expression>($3)); }
 
 OPTIONAL_COMMENT:
     %empty           { $$ = new std::string(); }
@@ -116,6 +120,12 @@ NOT_EMPTY_EXP_LIST:
 LVALUE:
     VARIABLE                   { $$ = $1; }
 |   VARIABLE '(' EXP_LIST ')'  { $$ = new ast::VectorGetElementExpression(move_ptr($1), move_ptr($3)); }
+
+PRINT_LIST:
+    %empty                                 { $$ = new ast::PrintExpression(); }
+|   PRINT_LIST EXP %prec LOWER_THAN_MINUS  { $$ = $1; $$->addExpression(std::unique_ptr<ast::Expression>($2)); $$->printNewLine = true; }
+|   PRINT_LIST ';'                         { $$ = $1; $$->printNewLine = false; }
+|   PRINT_LIST ','                         { $$ = $1; $$->addExpression(std::make_unique<ast::StringConstExpression>("    ")); $$->printNewLine = false; }
 
 EXP:
     CONST                      { $$ = $1; }
@@ -141,7 +151,10 @@ EXP:
 |   EXP EQV_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("eqv", move_vector<ast::Expression>({$1, $3})).release(); }
 |   EXP IMP_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("imp", move_vector<ast::Expression>({$1, $3})).release(); }
 |   GW_FN_NAME '(' EXP_LIST ')'     { $$ = ast::retrieveFunctionExpression(move_ptr($1), move_ptr($3)).release(); }
-|   OPTIONAL_LET_KEYWORD LVALUE EQUAL_OPERATOR EXP  { $$ = ast::retrieveFunctionExpression("let", move_vector<ast::Expression>({$2, $4})).release(); }
-|   DIM_KEYWORD VARIABLE '(' EXP_LIST ')'  { $$ = new ast::VectorDimExpression(move_ptr($2), move_ptr($4)); }
-|   TRON_KEYWORD                    { $$ = ast::retrieveFunctionExpression("tron", {}).release(); }
-|   TROFF_KEYWORD                   { $$ = ast::retrieveFunctionExpression("troff", {}).release(); }
+
+STATEMENT:
+    OPTIONAL_LET_KEYWORD LVALUE EQUAL_OPERATOR EXP  { $$ = ast::retrieveFunctionExpression("let", move_vector<ast::Expression>({$2, $4})).release(); }
+|   DIM_KEYWORD VARIABLE '(' EXP_LIST ')'           { $$ = new ast::VectorDimExpression(move_ptr($2), move_ptr($4)); }
+|   TRON_KEYWORD                                    { $$ = ast::retrieveFunctionExpression("tron", {}).release(); }
+|   TROFF_KEYWORD                                   { $$ = ast::retrieveFunctionExpression("troff", {}).release(); }
+|   PRINT_KEYWORD PRINT_LIST                        { $$ = $2; }

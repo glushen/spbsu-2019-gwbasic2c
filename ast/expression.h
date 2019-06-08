@@ -88,5 +88,18 @@ namespace ast {
     bool castableImplicitly(gw_logic::Type sourceType, gw_logic::Type targetType);
     bool castableExplicitly(gw_logic::Type sourceType, gw_logic::Type targetType);
     std::unique_ptr<Expression> castOrThrow(std::unique_ptr<Expression> expression, gw_logic::Type targetType);
-    std::vector<std::unique_ptr<Expression>> castOrThrow(std::vector<std::unique_ptr<Expression>> expression, gw_logic::Type targetType);
+    std::vector<std::unique_ptr<Expression>> castOrThrow(std::vector<std::unique_ptr<Expression>> expressions, gw_logic::Type targetType);
+    std::unique_ptr<Expression> convertToString(std::unique_ptr<Expression> expression);
+
+    class PrintExpression: public Expression {
+    public:
+        bool printNewLine = true;
+        PrintExpression();
+        void provideInfo(ProgramInfo& programInfo) const override;
+        void print(std::ostream& stream) const override;
+        void addExpression(std::unique_ptr<Expression> expression);
+    private:
+        std::vector<std::unique_ptr<Expression>> expressions;
+        const StringConstExpression newLineExpression;
+    };
 }

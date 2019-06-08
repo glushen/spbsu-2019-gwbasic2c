@@ -1,5 +1,5 @@
 #include "end.cpp"
 void stop(void) {
-    printf("Break in line %d\n", line_number);
+    std::cout << "Break in line " << line_number << std::endl;
     end();
 }
