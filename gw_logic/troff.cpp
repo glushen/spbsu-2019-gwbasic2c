@@ -1,4 +1,4 @@
 #include "core/core.cpp"
-void troff(void) {
+void troff() {
     print_each_line_number = false;
 }

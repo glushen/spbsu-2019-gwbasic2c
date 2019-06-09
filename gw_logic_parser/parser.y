@@ -72,7 +72,6 @@ ARGUMENT:
 
 ARGUMENT_LIST:
     %empty                   { $$ = new vector<string>(); }
-|   VOID_TYPE                { $$ = new vector<string>(); }
 |   NON_EMPTY_ARGUMENT_LIST  { $$ = $1; }
 
 NON_EMPTY_ARGUMENT_LIST:

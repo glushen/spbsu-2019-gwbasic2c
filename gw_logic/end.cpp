@@ -1,4 +1,4 @@
 #include "core/core.cpp"
-void end(void) {
+void end() {
     exit(EXIT_SUCCESS);
 }

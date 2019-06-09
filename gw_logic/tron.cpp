@@ -1,4 +1,4 @@
 #include "core/core.cpp"
-void tron(void) {
+void tron() {
     print_each_line_number = true;
 }
