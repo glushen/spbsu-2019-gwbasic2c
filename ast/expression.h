@@ -75,7 +75,7 @@ namespace ast {
         void print(std::ostream& stream) const override;
     };
 
-    std::unique_ptr<FunctionExpression> retrieveFunctionExpression(const std::string& name, std::vector<std::unique_ptr<Expression>> argumentList);
+    std::unique_ptr<FunctionExpression> asFunction(const std::string& name, std::vector<std::unique_ptr<Expression>> argumentList);
 
     class CastedExpression: public Expression {
     public:

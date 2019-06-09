@@ -146,40 +146,40 @@ OPTIONAL_LINE_INPUT_PROMPT_STRING:
 
 OPTIONAL_INPUT_PROMPT_STRING:
     %empty     { $$ = new ast::StringConstExpression("? "); }
-|   CONST ';'  { $$ = ast::retrieveFunctionExpression("sum", move_vector<ast::Expression>({$1, new ast::StringConstExpression("? ")})).release(); }
+|   CONST ';'  { $$ = ast::asFunction("sum", move_vector<ast::Expression>({$1, new ast::StringConstExpression("? ")})).release(); }
 |   CONST ','  { $$ = $1; }
 
 EXP:
     CONST                      { $$ = $1; }
 |   LVALUE                     { $$ = $1; }
 |   '(' EXP ')'                { $$ = $2; }
-|   EXP '^' EXP                { $$ = ast::retrieveFunctionExpression("pow", move_vector<ast::Expression>({$1, $3})).release(); }
-|   '-' EXP %prec UNARY_MINUS  { $$ = ast::retrieveFunctionExpression("neg", move_vector<ast::Expression>({$2})).release(); }
-|   EXP '*' EXP                { $$ = ast::retrieveFunctionExpression("mul", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP '/' EXP                { $$ = ast::retrieveFunctionExpression("fdiv", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP '\\' EXP               { $$ = ast::retrieveFunctionExpression("idiv", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP MOD_OPERATOR EXP       { $$ = ast::retrieveFunctionExpression("mod", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP '+' EXP                { $$ = ast::retrieveFunctionExpression("sum", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP '-' EXP                { $$ = ast::retrieveFunctionExpression("sub", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP EQUAL_OPERATOR EXP          { $$ = ast::retrieveFunctionExpression("equal", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP UNEQUAL_OPERATOR EXP        { $$ = ast::retrieveFunctionExpression("unequal", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP LESS_OPERATOR EXP           { $$ = ast::retrieveFunctionExpression("less", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP GREATER_OPERATOR EXP        { $$ = ast::retrieveFunctionExpression("greater", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP LESS_EQUAL_OPERATOR EXP     { $$ = ast::retrieveFunctionExpression("geq", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP GREATER_EQUAL_OPERATOR EXP  { $$ = ast::retrieveFunctionExpression("leq", move_vector<ast::Expression>({$1, $3})).release(); }
-|   NOT_OPERATOR EXP                { $$ = ast::retrieveFunctionExpression("not", move_vector<ast::Expression>({$2})).release(); }
-|   EXP AND_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("and", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP OR_OPERATOR EXP             { $$ = ast::retrieveFunctionExpression("or", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP XOR_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("xor", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP EQV_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("eqv", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP IMP_OPERATOR EXP            { $$ = ast::retrieveFunctionExpression("imp", move_vector<ast::Expression>({$1, $3})).release(); }
-|   GW_FN_NAME '(' EXP_LIST ')'     { $$ = ast::retrieveFunctionExpression(move_ptr($1), move_ptr($3)).release(); }
+|   EXP '^' EXP                { $$ = ast::asFunction("pow", move_vector<ast::Expression>({$1, $3})).release(); }
+|   '-' EXP %prec UNARY_MINUS  { $$ = ast::asFunction("neg", move_vector<ast::Expression>({$2})).release(); }
+|   EXP '*' EXP                { $$ = ast::asFunction("mul", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP '/' EXP                { $$ = ast::asFunction("fdiv", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP '\\' EXP               { $$ = ast::asFunction("idiv", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP MOD_OPERATOR EXP       { $$ = ast::asFunction("mod", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP '+' EXP                { $$ = ast::asFunction("sum", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP '-' EXP                { $$ = ast::asFunction("sub", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP EQUAL_OPERATOR EXP          { $$ = ast::asFunction("equal", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP UNEQUAL_OPERATOR EXP        { $$ = ast::asFunction("unequal", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP LESS_OPERATOR EXP           { $$ = ast::asFunction("less", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP GREATER_OPERATOR EXP        { $$ = ast::asFunction("greater", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP LESS_EQUAL_OPERATOR EXP     { $$ = ast::asFunction("geq", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP GREATER_EQUAL_OPERATOR EXP  { $$ = ast::asFunction("leq", move_vector<ast::Expression>({$1, $3})).release(); }
+|   NOT_OPERATOR EXP                { $$ = ast::asFunction("not", move_vector<ast::Expression>({$2})).release(); }
+|   EXP AND_OPERATOR EXP            { $$ = ast::asFunction("and", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP OR_OPERATOR EXP             { $$ = ast::asFunction("or", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP XOR_OPERATOR EXP            { $$ = ast::asFunction("xor", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP EQV_OPERATOR EXP            { $$ = ast::asFunction("eqv", move_vector<ast::Expression>({$1, $3})).release(); }
+|   EXP IMP_OPERATOR EXP            { $$ = ast::asFunction("imp", move_vector<ast::Expression>({$1, $3})).release(); }
+|   GW_FN_NAME '(' EXP_LIST ')'     { $$ = ast::asFunction(move_ptr($1), move_ptr($3)).release(); }
 
 STATEMENT:
-    OPTIONAL_LET_KEYWORD LVALUE EQUAL_OPERATOR EXP  { $$ = ast::retrieveFunctionExpression("let", move_vector<ast::Expression>({$2, $4})).release(); }
+    OPTIONAL_LET_KEYWORD LVALUE EQUAL_OPERATOR EXP  { $$ = ast::asFunction("let", move_vector<ast::Expression>({$2, $4})).release(); }
 |   DIM_KEYWORD VARIABLE '(' EXP_LIST ')'           { $$ = new ast::VectorDimExpression(move_ptr($2), move_ptr($4)); }
-|   TRON_KEYWORD                                    { $$ = ast::retrieveFunctionExpression("tron", {}).release(); }
-|   TROFF_KEYWORD                                   { $$ = ast::retrieveFunctionExpression("troff", {}).release(); }
+|   TRON_KEYWORD                                    { $$ = ast::asFunction("tron", {}).release(); }
+|   TROFF_KEYWORD                                   { $$ = ast::asFunction("troff", {}).release(); }
 |   PRINT_KEYWORD PRINT_LIST                        { $$ = $2; }
-|   LINE_INPUT_KEYWORD OPTIONAL_SEMICOLON OPTIONAL_LINE_INPUT_PROMPT_STRING LVALUE  { $$ = ast::retrieveFunctionExpression("lineinput", move_vector<ast::Expression>({$3, $4})).release(); }
+|   LINE_INPUT_KEYWORD OPTIONAL_SEMICOLON OPTIONAL_LINE_INPUT_PROMPT_STRING LVALUE  { $$ = ast::asFunction("lineinput", move_vector<ast::Expression>({$3, $4})).release(); }
 |   INPUT_KEYWORD OPTIONAL_SEMICOLON OPTIONAL_INPUT_PROMPT_STRING LVALUE_LIST       { $$ = new ast::InputExpression(std::unique_ptr<ast::Expression>($3), move_ptr($4)); }

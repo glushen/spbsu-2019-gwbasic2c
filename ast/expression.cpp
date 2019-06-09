@@ -128,7 +128,7 @@ void ast::FunctionExpression::print(std::ostream& stream) const {
     stream << ')';
 }
 
-std::unique_ptr<ast::FunctionExpression> ast::retrieveFunctionExpression(const std::string& name, std::vector<std::unique_ptr<Expression>> argumentList) {
+std::unique_ptr<ast::FunctionExpression> ast::asFunction(const std::string& name, std::vector<std::unique_ptr<Expression>> argumentList) {
     if (gw::logic::BY_FUNCTION_NAME.count(name) == 0) {
         throw std::invalid_argument("Function " + name + " is not found");
     }
@@ -263,7 +263,7 @@ std::unique_ptr<ast::Expression> ast::castOrThrow(std::unique_ptr<ast::Expressio
         }
         std::vector<std::unique_ptr<Expression>> argumentList;
         argumentList.push_back(std::move(expression));
-        return std::move(retrieveFunctionExpression(functionName, std::move(argumentList)));
+        return std::move(asFunction(functionName, std::move(argumentList)));
     } else {
         throw std::invalid_argument("Cannot cast " + to_string(expression->type) + " to " + to_string(targetType));
     }
@@ -282,7 +282,7 @@ std::unique_ptr<ast::Expression> ast::convertToString(std::unique_ptr<ast::Expre
     } else {
         std::vector<std::unique_ptr<Expression>> arguments;
         arguments.push_back(move(expression));
-        return ast::retrieveFunctionExpression("str$", move(arguments));
+        return ast::asFunction("str$", move(arguments));
     }
 }
 
