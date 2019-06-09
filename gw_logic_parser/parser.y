@@ -5,8 +5,6 @@
 #include <cassert>
 #include <gw_logic_parser/main.h>
 
-using std::string, std::vector, std::move;
-
 extern int yylex(void);
 extern int yylex_destroy(void);
 void yyerror(const char* str, ...);
@@ -14,18 +12,18 @@ void yyerror(const char* str, ...);
 extern int lexer_signature_offset;
 
 template<typename T> T move_ptr(T* ptr) {
-    T value = move(*ptr);
+    T value = std::move(*ptr);
     delete ptr;
     return value;
 }
 }
 
 %union {
-    string* include_path;
-    vector<string>* include_list;
-    string* type_name;
-    vector<string>* type_list;
-    string* name;
+    std::string* include_path;
+    std::vector<std::string>* include_list;
+    std::string* type_name;
+    std::vector<std::string>* type_list;
+    std::string* name;
 }
 
 %token INCLUDE_DIRECTIVE
@@ -49,7 +47,7 @@ FUNCTION_SIGNATURE_AND_DEPENDENCIES:
     }
 
 INCLUDE_LIST:
-    %empty                     { $$ = new vector<string>(); }
+    %empty                     { $$ = new std::vector<std::string>(); }
 |   INCLUDE_LIST INCLUDE_LINE  { $$ = $1; $$->push_back(move_ptr($2)); }
 
 INCLUDE_LINE:
@@ -71,9 +69,9 @@ ARGUMENT:
     ARGUMENT_TYPE NAME  { $$ = $1; }
 
 ARGUMENT_LIST:
-    %empty                   { $$ = new vector<string>(); }
+    %empty                   { $$ = new std::vector<std::string>(); }
 |   NON_EMPTY_ARGUMENT_LIST  { $$ = $1; }
 
 NON_EMPTY_ARGUMENT_LIST:
-    ARGUMENT                              { $$ = new vector<string>(); $$->push_back(move_ptr($1)); }
+    ARGUMENT                              { $$ = new std::vector<std::string>(); $$->push_back(move_ptr($1)); }
 |   NON_EMPTY_ARGUMENT_LIST ',' ARGUMENT  { $$ = $1; $$->push_back(move_ptr($3)); }

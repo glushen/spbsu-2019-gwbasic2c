@@ -10,39 +10,37 @@
 #include "main.h"
 #include "util.h"
 
-using namespace std;
-
 extern FILE* yyin;
 
-const regex SKIP_LINE_REGEX(R"(\s*#pragma\s+once\s*|\s*)");
-const regex INCLUDE_REGEX(R"(\s*#include\s+\"([^\"]+)\"\s*)");
-const regex CORE_INCLUDE_REGEX(R"(\.\.\/core\/\S+)");
-const regex GW_FUNCTION_NAME_REGEX(R"(([^_]+)(?:_.*)?)");
+const std::regex SKIP_LINE_REGEX(R"(\s*#pragma\s+once\s*|\s*)");
+const std::regex INCLUDE_REGEX(R"(\s*#include\s+\"([^\"]+)\"\s*)");
+const std::regex CORE_INCLUDE_REGEX(R"(\.\.\/core\/\S+)");
+const std::regex GW_FUNCTION_NAME_REGEX(R"(([^_]+)(?:_.*)?)");
 
-map<string, CoreFileData> CORE_FILES_DATA;
-map<string, LogicFileData> LOGIC_FILES_DATA;
-map<string, vector<string>> LOGIC_FILES_BY_FUNCTION_NAME;
+std::map<std::string, CoreFileData> CORE_FILES_DATA;
+std::map<std::string, LogicFileData> LOGIC_FILES_DATA;
+std::map<std::string, std::vector<std::string>> LOGIC_FILES_BY_FUNCTION_NAME;
 
-ofstream hout;
-ofstream cppout;
+std::ofstream hout;
+std::ofstream cppout;
 
 FILE* OPENED_LOGIC_FILE;
-string OPENED_LOGIC_FILE_PATH;
+std::string OPENED_LOGIC_FILE_PATH;
 
 void manage_core_file(const char* path) {
-    ifstream fin(path);
+    std::ifstream fin(path);
     if (!fin.is_open()) {
-        cerr << "Cannot open file " << path << endl;
+        std::cerr << "Cannot open file " << path << std::endl;
         exit(EXIT_FAILURE);
     }
     CoreFileData data = {};
 
-    for (string line; getline(fin, line);) {
+    for (std::string line; getline(fin, line);) {
         if (regex_match(line, SKIP_LINE_REGEX)) {
             continue;
         }
 
-        smatch include_match_result;
+        std::smatch include_match_result;
         if (regex_match(line, include_match_result, INCLUDE_REGEX)) {
             data.include_path_list.push_back(include_match_result[1]);
             continue;
@@ -61,7 +59,7 @@ void manage_core_file(const char* path) {
 void manage_logic_file(const char* filename) {
     OPENED_LOGIC_FILE = fopen(filename, "r");
     if (OPENED_LOGIC_FILE == nullptr) {
-        cerr << "Cannot open file " << filename << endl;
+        std::cerr << "Cannot open file " << filename << std::endl;
         exit(EXIT_FAILURE);
     }
     OPENED_LOGIC_FILE_PATH = filename;
@@ -69,18 +67,18 @@ void manage_logic_file(const char* filename) {
     yyin = OPENED_LOGIC_FILE;
     int result = yyparse(); // will run handle_function_signature()
     if (result != 0) {
-        cerr << "Cannot parse file " << filename << endl;
+        std::cerr << "Cannot parse file " << filename << std::endl;
         exit(EXIT_FAILURE);
     }
 }
 
-bool gw_types_comparator(const string &a, const string &b) {
+bool gw_types_comparator(const std::string &a, const std::string &b) {
     return (a == "INT" && (b == "FLOAT" || b == "DOUBLE"))
         || (a == "FLOAT" && b == "DOUBLE");
 }
 
-void save_logic_file_by_function_name(const string& gw_function_name,
-                                      const string& new_logic_filename,
+void save_logic_file_by_function_name(const std::string& gw_function_name,
+                                      const std::string& new_logic_filename,
                                       const LogicFileData& new_data) {
     auto& data_list = LOGIC_FILES_BY_FUNCTION_NAME[gw_function_name];
 
@@ -111,15 +109,15 @@ void save_logic_file_by_function_name(const string& gw_function_name,
 void handle_function_signature(LogicFileData&& data) {
     fclose(OPENED_LOGIC_FILE);
 
-    ifstream fin(OPENED_LOGIC_FILE_PATH);
+    std::ifstream fin(OPENED_LOGIC_FILE_PATH);
     if (!fin.is_open()) {
-        cerr << "Cannot open file " << OPENED_LOGIC_FILE_PATH << endl;
+        std::cerr << "Cannot open file " << OPENED_LOGIC_FILE_PATH << std::endl;
         exit(EXIT_FAILURE);
     }
 
     fin.ignore(data.signature_offset_in_file);
 
-    for (string line; getline(fin, line);) {
+    for (std::string line; getline(fin, line);) {
         if (regex_match(line, SKIP_LINE_REGEX)) {
             continue;
         }
@@ -135,13 +133,13 @@ void handle_function_signature(LogicFileData&& data) {
     auto filename = util::filename_by_path(OPENED_LOGIC_FILE_PATH);
     LOGIC_FILES_DATA[filename] = data;
 
-    smatch gw_function_name_match;
+    std::smatch gw_function_name_match;
     regex_match(data.function_name, gw_function_name_match, GW_FUNCTION_NAME_REGEX);
     save_logic_file_by_function_name(gw_function_name_match[1], filename, data);
 }
 
-void print_core_file(const string& name) {
-    static set<string> printed;
+void print_core_file(const std::string& name) {
+    static std::set<std::string> printed;
     if (printed.count(name) > 0) return;
     printed.insert(name);
 
@@ -151,7 +149,7 @@ void print_core_file(const string& name) {
         print_core_file(util::filename_by_path(path));
     }
 
-    hout << "        extern const File* " << name << ";" << endl;
+    hout << "        extern const File* " << name << ";" << std::endl;
 
     cppout << "const gw::core::File* gw::core::" << name << " = new gw::core::File({ ";
     cppout << "\"" << name << "\", ";
@@ -169,30 +167,30 @@ void print_core_file(const string& name) {
     cppout << " }, ";
 
     cppout << "\"" << util::escape(data.generated_code) << "\"";
-    cppout << " });" << endl;
+    cppout << " });" << std::endl;
 }
 
-void print_logic_file(const string& name) {
-    static set<string> printed;
+void print_logic_file(const std::string& name) {
+    static std::set<std::string> printed;
     if (printed.count(name) > 0) return;
     printed.insert(name);
 
     auto& data = LOGIC_FILES_DATA[name];
 
-    vector<string> core_dependencies;
-    vector<string> logic_dependencies;
+    std::vector<std::string> core_dependencies;
+    std::vector<std::string> logic_dependencies;
 
     for (auto& path : data.include_path_list) {
         if (regex_match(path, CORE_INCLUDE_REGEX)) {
             core_dependencies.push_back(util::filename_by_path(path));
         } else {
-            string filename = util::filename_by_path(path);
+            std::string filename = util::filename_by_path(path);
             print_logic_file(filename);
             logic_dependencies.push_back(filename);
         }
     }
 
-    hout << "        extern const File* " << name << ";" << endl;
+    hout << "        extern const File* " << name << ";" << std::endl;
 
     cppout << "const gw::logic::File* gw::logic::" << name << " = new gw::logic::File({ ";
     cppout << "\"" << data.function_name << "\", ";
@@ -236,7 +234,7 @@ void print_logic_file(const string& name) {
     cppout << " }, ";
 
     cppout << "\"" << util::escape(data.generated_code) << "\"";
-    cppout << " });" << endl;
+    cppout << " });" << std::endl;
 }
 
 int main(int count, char* arguments[]) {
@@ -280,22 +278,20 @@ int main(int count, char* arguments[]) {
 #include <string>
 
 namespace gw {
-    using std::map, std::vector, std::string;
-
     enum Type {
         INT, FLOAT, DOUBLE, STRING, INT_REF, FLOAT_REF, DOUBLE_REF, STRING_REF, VOID
     };
 
     namespace core {
         struct File {
-            string name;
-            vector<const File*> coreDependencies;
-            string code;
+            std::string name;
+            std::vector<const File*> coreDependencies;
+            std::string code;
         };
 
 )";
 
-    cppout << "#include \"gw.h\"" << endl << endl;
+    cppout << "#include \"gw.h\"" << std::endl << std::endl;
 
     for (auto& name_and_data : CORE_FILES_DATA) {
         print_core_file(name_and_data.first);
@@ -305,12 +301,12 @@ namespace gw {
 
     namespace logic {
         struct File {
-            string name;
-            vector<const core::File*> coreDependencies;
-            vector<const logic::File*> logicDependencies;
+            std::string name;
+            std::vector<const core::File*> coreDependencies;
+            std::vector<const logic::File*> logicDependencies;
             Type returnType;
-            vector<Type> argumentTypes;
-            string code;
+            std::vector<Type> argumentTypes;
+            std::string code;
         };
 
 )";
@@ -319,20 +315,20 @@ namespace gw {
         print_logic_file(name_and_data.first);
     }
 
-    hout << endl;
-    hout << "        extern const map<string, vector<const File*>> BY_FUNCTION_NAME;" << endl;
-    hout << "    }" << endl;
-    hout << '}' << endl;
+    hout << std::endl;
+    hout << "        extern const std::map<std::string, std::vector<const File*>> BY_FUNCTION_NAME;" << std::endl;
+    hout << "    }" << std::endl;
+    hout << '}' << std::endl;
 
-    cppout << endl;
-    cppout << "const std::map<std::string, std::vector<const gw::logic::File*>> gw::logic::BY_FUNCTION_NAME = {" << endl;
+    cppout << std::endl;
+    cppout << "const std::map<std::string, std::vector<const gw::logic::File*>> gw::logic::BY_FUNCTION_NAME = {" << std::endl;
 
     int first = true;
     for (auto& name_and_filenames : LOGIC_FILES_BY_FUNCTION_NAME) {
         if (first) {
             first = false;
         } else {
-            cppout << "," << endl;
+            cppout << "," << std::endl;
         }
         cppout << "    { \"" << name_and_filenames.first << "\", ";
 
@@ -351,7 +347,7 @@ namespace gw {
         cppout << " }";
     }
 
-    cppout << endl << "};" << endl;
+    cppout << std::endl << "};" << std::endl;
 }
 
 void yyerror(const char* str, ...) {

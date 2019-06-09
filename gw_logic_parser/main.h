@@ -3,20 +3,18 @@
 #include <vector>
 #include <string>
 
-using std::vector, std::string;
-
 struct CoreFileData {
-    vector<string> include_path_list;
-    string generated_code;
+    std::vector<std::string> include_path_list;
+    std::string generated_code;
 };
 
 struct LogicFileData {
-    vector<string> include_path_list;
-    string return_type;
-    string function_name;
-    vector<string> argument_type_list;
+    std::vector<std::string> include_path_list;
+    std::string return_type;
+    std::string function_name;
+    std::vector<std::string> argument_type_list;
     int signature_offset_in_file;
-    string generated_code;
+    std::string generated_code;
 };
 
 void handle_function_signature(LogicFileData&& signature);

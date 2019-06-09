@@ -1,8 +1,6 @@
 #include <utility>
 #include "program.h"
 
-using namespace std;
-
 ast::Line::Line(int lineNumber, std::vector<std::unique_ptr<ast::Expression>> statementList, std::string comment):
         lineNumber(lineNumber),
         statementList(std::move(statementList)),
@@ -15,19 +13,19 @@ void ast::Line::provideInfo(ast::ProgramInfo& programInfo) const {
     programInfo.coreFiles.insert(gw::core::core);
 }
 
-void ast::Line::print(ostream& stream) const {
+void ast::Line::print(std::ostream& stream) const {
     stream << "line(" << lineNumber << ");";
 
     if (comment[0] != '\0') {
         stream << " //" << comment;
     }
 
-    stream << endl;
+    stream << std::endl;
 
     for (auto& statement : statementList) {
         stream << "    ";
         statement->print(stream);
-        stream << ';' << endl;
+        stream << ';' << std::endl;
     }
 }
 
@@ -43,7 +41,7 @@ void ast::printCoreFile(std::ostream& stream,
         printCoreFile(stream, dependency, printedCoreFiles);
     }
 
-    stream << coreFile->code << endl;
+    stream << coreFile->code << std::endl;
 }
 
 void ast::printLogicFile(std::ostream& stream,
@@ -62,7 +60,7 @@ void ast::printLogicFile(std::ostream& stream,
         printLogicFile(stream, dependency, printedCoreFiles, printedLogicFiles);
     }
 
-    stream << logicFile->code << endl;
+    stream << logicFile->code << std::endl;
 }
 
 void ast::printProgram(std::ostream& stream, std::vector<ast::Line> lines) {
@@ -86,19 +84,19 @@ void ast::printProgram(std::ostream& stream, std::vector<ast::Line> lines) {
         printLogicFile(stream, logicFile, printedCoreFiles, printedLogicFiles);
     }
 
-    stream << endl;
+    stream << std::endl;
 
     for (auto& definition : programInfo.variableDefinitions) {
-        stream << definition << ';' << endl;
+        stream << definition << ';' << std::endl;
     }
 
-    stream << endl;
+    stream << std::endl;
 
-    stream << "int main() {" << endl;
+    stream << "int main() {" << std::endl;
 
     for (auto& line : lines) {
         line.print(stream);
     }
 
-    stream << "}" << endl;
+    stream << "}" << std::endl;
 }

@@ -1,18 +1,16 @@
 #include <cstdarg>
 #include "util.h"
 
-using std::string;
-
-string util::filename_by_path(const string& path) {
+std::string util::filename_by_path(const std::string& path) {
     int slash_index = path.find_last_of("/\\");
-    int substr_start = (slash_index != string::npos ? slash_index + 1 : 0);
+    int substr_start = (slash_index != std::string::npos ? slash_index + 1 : 0);
     int dot_index = path.find_last_of('.');
-    int substr_end = (dot_index != string::npos && dot_index >= substr_start ? dot_index : path.size());
+    int substr_end = (dot_index != std::string::npos && dot_index >= substr_start ? dot_index : path.size());
     return path.substr(substr_start, substr_end - substr_start);
 }
 
-string util::escape(const string& str) {
-    string result;
+std::string util::escape(const std::string& str) {
+    std::string result;
     result.reserve(str.size());
 
     for (char c : str) {
@@ -38,7 +36,7 @@ string util::escape(const string& str) {
     return result;
 }
 
-string util::to_string(const char* format, ...) {
+std::string util::to_string(const char* format, ...) {
     va_list arguments;
 
     va_start(arguments, format);
@@ -49,7 +47,7 @@ string util::to_string(const char* format, ...) {
     vsprintf(result_chars, format, arguments);
     va_end(arguments);
 
-    string result_string(result_chars);
+    std::string result_string(result_chars);
     delete[] result_chars;
     return result_string;
 }

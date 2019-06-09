@@ -5,8 +5,6 @@
 #include "expression.h"
 #include "util.h"
 
-using namespace std;
-
 ast::Expression::Expression(gw::Type type):
         type(type) { }
 
@@ -18,7 +16,7 @@ void ast::ConstExpression::provideInfo(ast::ProgramInfo& programInfo) const {
     // nothing to provide
 }
 
-void ast::ConstExpression::print(ostream& stream) const {
+void ast::ConstExpression::print(std::ostream& stream) const {
     stream << valueToPrint;
 }
 
@@ -68,7 +66,7 @@ void ast::VariableExpression::provideInfo(ast::ProgramInfo& programInfo) const {
     programInfo.variableDefinitions.insert(getPrintableType() + " " + getPrintableName() + " = " + getPrintableDefaultValue());
 }
 
-void ast::VariableExpression::print(ostream& stream) const {
+void ast::VariableExpression::print(std::ostream& stream) const {
     stream << getPrintableName();
 }
 
@@ -124,13 +122,13 @@ void ast::FunctionExpression::provideInfo(ast::ProgramInfo& programInfo) const {
     }
 }
 
-void ast::FunctionExpression::print(ostream& stream) const {
+void ast::FunctionExpression::print(std::ostream& stream) const {
     stream << logicFile->name << '(';
     joinAndPrint(stream, argumentList);
     stream << ')';
 }
 
-std::unique_ptr<ast::FunctionExpression> ast::retrieveFunctionExpression(const string& name, vector<unique_ptr<Expression>> argumentList) {
+std::unique_ptr<ast::FunctionExpression> ast::retrieveFunctionExpression(const std::string& name, std::vector<std::unique_ptr<Expression>> argumentList) {
     if (gw::logic::BY_FUNCTION_NAME.count(name) == 0) {
         throw std::invalid_argument("Function " + name + " is not found");
     }
@@ -251,7 +249,7 @@ std::unique_ptr<ast::Expression> ast::castOrThrow(std::unique_ptr<ast::Expressio
     if (castableImplicitly(expression->type, targetType)) {
         return std::make_unique<CastedExpression>(std::move(expression), targetType);
     } else if (castableExplicitly(expression->type, targetType)) {
-        string functionName;
+        std::string functionName;
         switch (targetType) {
             case gw::INT:
                 functionName = "cint";
@@ -263,7 +261,7 @@ std::unique_ptr<ast::Expression> ast::castOrThrow(std::unique_ptr<ast::Expressio
                 assert(false);
                 break;
         }
-        vector<unique_ptr<Expression>> argumentList;
+        std::vector<std::unique_ptr<Expression>> argumentList;
         argumentList.push_back(std::move(expression));
         return std::move(retrieveFunctionExpression(functionName, std::move(argumentList)));
     } else {
@@ -278,11 +276,11 @@ std::vector<std::unique_ptr<ast::Expression>> ast::castOrThrow(std::vector<std::
     return expressions;
 }
 
-unique_ptr<ast::Expression> ast::convertToString(unique_ptr<ast::Expression> expression) {
+std::unique_ptr<ast::Expression> ast::convertToString(std::unique_ptr<ast::Expression> expression) {
     if (expression->type == gw::STRING || expression->type == gw::STRING_REF) {
         return std::make_unique<CastedExpression>(std::move(expression), gw::STRING);
     } else {
-        vector<unique_ptr<Expression>> arguments;
+        std::vector<std::unique_ptr<Expression>> arguments;
         arguments.push_back(move(expression));
         return ast::retrieveFunctionExpression("str$", move(arguments));
     }
@@ -316,11 +314,11 @@ void ast::PrintExpression::print(std::ostream& stream) const {
     stream << "})";
 }
 
-void ast::PrintExpression::addExpression(unique_ptr<ast::Expression> expression) {
+void ast::PrintExpression::addExpression(std::unique_ptr<ast::Expression> expression) {
     expressions.push_back(convertToString(move(expression)));
 }
 
-ast::InputExpression::InputExpression(std::unique_ptr<Expression> prompt, vector<unique_ptr<ast::Expression>> expressions):
+ast::InputExpression::InputExpression(std::unique_ptr<Expression> prompt, std::vector<std::unique_ptr<ast::Expression>> expressions):
         Expression(gw::VOID),
         prompt(std::move(prompt)),
         expressions(std::move(expressions)) {
