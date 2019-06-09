@@ -15,6 +15,7 @@ namespace ast {
         std::set<std::string> variableDefinitions;
         std::set<const gw::core::File*> coreFiles;
         std::set<const gw::logic::File*> logicFiles;
+        std::set<int> requiredLineNumbers;
     };
 
     class Node {

@@ -344,3 +344,36 @@ void ast::InputExpression::print(std::ostream& stream) const {
     joinAndPrint(stream, expressions);
     stream << "})";
 }
+
+ast::GotoExpression::GotoExpression(int lineNumber):
+        Expression(gw::VOID),
+        lineNumber(lineNumber) { }
+
+void ast::GotoExpression::provideInfo(ast::ProgramInfo& programInfo) const {
+    programInfo.requiredLineNumbers.insert(lineNumber);
+}
+
+void ast::GotoExpression::print(std::ostream& stream) const {
+    stream << "goto L" << lineNumber;
+}
+
+ast::OnGotoExpression::OnGotoExpression(std::unique_ptr<ast::Expression> expression, std::vector<int> lineNumbers):
+        Expression(gw::VOID),
+        expression(castOrThrow(std::move(expression), gw::INT)),
+        lineNumbers(std::move(lineNumbers)) { }
+
+void ast::OnGotoExpression::provideInfo(ast::ProgramInfo& programInfo) const {
+    expression->provideInfo(programInfo);
+    programInfo.requiredLineNumbers.insert(lineNumbers.begin(), lineNumbers.end());
+    programInfo.coreFiles.insert(gw::core::check_on_go);
+}
+
+void ast::OnGotoExpression::print(std::ostream& stream) const {
+    stream << "switch(check_on_go(";
+    expression->print(stream);
+    stream << ")) {";
+    for (int i = 0; i < lineNumbers.size(); i++) {
+        stream << " case " << (i+1) << ": goto L" << lineNumbers[i] << ';';
+    }
+    stream << " }";
+}

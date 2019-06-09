@@ -29,7 +29,8 @@ template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*>
 }
 
 %union {
-    int line_number;
+    int lineNumber;
+    std::vector<int>* lineNumbers;
     std::string* comment;
     std::vector<ast::Line>* lines;
     ast::Line* line;
@@ -40,19 +41,20 @@ template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*>
     ast::PrintExpression* printExp;
 }
 
-%token <exp> CONST
+%token <exp> NUM_CONST STRING_CONST
 %token <variable> VARIABLE
 %token <name> GW_FN_NAME_UNSUPPORTED GW_CMD_NAME_UNSUPPORTED GW_STM_NAME_UNSUPPORTED
 %token <name> GW_FN_NAME GW_CMD_NAME GW_STM_NAME
 %token <name> FN_VAR UNSUPPORTED_VAR
-%token LET_KEYWORD DIM_KEYWORD TRON_KEYWORD TROFF_KEYWORD PRINT_KEYWORD LINE_INPUT_KEYWORD INPUT_KEYWORD
+%token LET_KEYWORD DIM_KEYWORD TRON_KEYWORD TROFF_KEYWORD PRINT_KEYWORD LINE_INPUT_KEYWORD INPUT_KEYWORD ON_KEYWORD GOTO_KEYWORD
 %token MOD_OPERATOR
 %token EQUAL_OPERATOR UNEQUAL_OPERATOR LESS_OPERATOR GREATER_OPERATOR LESS_EQUAL_OPERATOR GREATER_EQUAL_OPERATOR
 %token NOT_OPERATOR AND_OPERATOR OR_OPERATOR XOR_OPERATOR EQV_OPERATOR IMP_OPERATOR
-%token <line_number> LINE_NUMBER
+%token <lineNumber> LINE_NUMBER GOTO_STATEMENT
 %token <comment> COMMENT
 %token END_OF_FILE
 
+%type <lineNumbers> LINE_NUMBER_LIST
 %type <comment> OPTIONAL_COMMENT
 %type <lines> PROGRAM LINE_LIST
 %type <line> LINE
@@ -141,16 +143,22 @@ OPTIONAL_SEMICOLON:
 |   ';'
 
 OPTIONAL_LINE_INPUT_PROMPT_STRING:
-    %empty     { $$ = new ast::StringConstExpression(""); }
-|   CONST ';'  { $$ = $1; }
+    %empty            { $$ = new ast::StringConstExpression(""); }
+|   STRING_CONST ';'  { $$ = $1; }
 
 OPTIONAL_INPUT_PROMPT_STRING:
-    %empty     { $$ = new ast::StringConstExpression("? "); }
-|   CONST ';'  { $$ = ast::asFunction("sum", move_vector<ast::Expression>({$1, new ast::StringConstExpression("? ")})).release(); }
-|   CONST ','  { $$ = $1; }
+    %empty            { $$ = new ast::StringConstExpression("? "); }
+|   STRING_CONST ';'  { $$ = ast::asFunction("sum", move_vector<ast::Expression>({$1, new ast::StringConstExpression("? ")})).release(); }
+|   STRING_CONST ','  { $$ = $1; }
+
+LINE_NUMBER_LIST:
+    LINE_NUMBER                       { $$ = new std::vector<int>(); $$->push_back($1); }
+|   LINE_NUMBER_LIST ',' LINE_NUMBER  { $$ = $1; $$->push_back($3); }
 
 EXP:
-    CONST                      { $$ = $1; }
+    NUM_CONST                  { $$ = $1; }
+|   LINE_NUMBER                { if ($1 < 32768) $$ = new ast::IntConstExpression($1); else $$ = new ast::FloatConstExpression($1); }
+|   STRING_CONST               { $$ = $1; }
 |   LVALUE                     { $$ = $1; }
 |   '(' EXP ')'                { $$ = $2; }
 |   EXP '^' EXP                { $$ = ast::asFunction("pow", move_vector<ast::Expression>({$1, $3})).release(); }
@@ -183,3 +191,5 @@ STATEMENT:
 |   PRINT_KEYWORD PRINT_LIST                        { $$ = $2; }
 |   LINE_INPUT_KEYWORD OPTIONAL_SEMICOLON OPTIONAL_LINE_INPUT_PROMPT_STRING LVALUE  { $$ = ast::asFunction("lineinput", move_vector<ast::Expression>({$3, $4})).release(); }
 |   INPUT_KEYWORD OPTIONAL_SEMICOLON OPTIONAL_INPUT_PROMPT_STRING LVALUE_LIST       { $$ = new ast::InputExpression(std::unique_ptr<ast::Expression>($3), move_ptr($4)); }
+|   GOTO_KEYWORD LINE_NUMBER                        { $$ = new ast::GotoExpression($2); }
+|   ON_KEYWORD EXP GOTO_KEYWORD LINE_NUMBER_LIST    { $$ = new ast::OnGotoExpression(std::unique_ptr<ast::Expression>($2), move_ptr($4)); }

@@ -12,19 +12,10 @@ VAR_NAME        ([a-z][a-z0-9\.]*)
 %%
 
 \'.+            { yylval.comment = new std::string(yytext+1); return COMMENT; }
-^\ *[0-9]{1,5}  { yylval.line_number = atoi(yytext); return LINE_NUMBER; }
-
-\"[^\"]*\"      { yylval.exp = new ast::StringConstExpression(std::string(yytext+1, yyleng-2)); return CONST; }
-[0-9]{1,7}      {
-                    long value = atol(yytext);
-                    if (-32768 <= value && value <= 32767) {
-                        yylval.exp = new ast::IntConstExpression(value);
-                    } else {
-                        yylval.exp = new ast::FloatConstExpression(value);
-                    }
-                    return CONST;
-                }
-[0-9]{8,}       { yylval.exp = new ast::DoubleConstExpression(atof(yytext)); return CONST; }
+\"[^\"]*\"      { yylval.exp = new ast::StringConstExpression(std::string(yytext+1, yyleng-2)); return STRING_CONST; }
+[0-9]{1,5}      { yylval.lineNumber = atoi(yytext); return LINE_NUMBER; }
+[0-9]{1,7}      { yylval.exp = new ast::FloatConstExpression(atol(yytext)); return NUM_CONST; }
+[0-9]{8,}       { yylval.exp = new ast::DoubleConstExpression(atof(yytext)); return NUM_CONST; }
 {NUM_WITH_DOT}  {
                     auto digit_count = yyleng - 1 - (yytext[0] == '-' ? 1 : 0);
                     if (digit_count <= 7) {
@@ -32,9 +23,9 @@ VAR_NAME        ([a-z][a-z0-9\.]*)
                     } else {
                         yylval.exp = new ast::DoubleConstExpression(atof(yytext));
                     }
-                    return CONST;
+                    return NUM_CONST;
                 }
-{NUM}E\-?[0-9]+ { yylval.exp = new ast::FloatConstExpression(atof(yytext)); return CONST; }
+{NUM}E\-?[0-9]+ { yylval.exp = new ast::FloatConstExpression(atof(yytext)); return NUM_CONST; }
 {NUM}D\-?[0-9]+ {
                     int i = 0;
                     while (yytext[i] != 'D' && yytext[i] != 'd') i++;
@@ -42,14 +33,14 @@ VAR_NAME        ([a-z][a-z0-9\.]*)
                     yytext[i] = 'E';
                     yylval.exp = new ast::DoubleConstExpression(atof(yytext));
                     yytext[i] = temp;
-                    return CONST;
+                    return NUM_CONST;
                 }
-{NUM}\!                  { yylval.exp = new ast::FloatConstExpression(atof(yytext)); return CONST; }
-{NUM}\#                  { yylval.exp = new ast::DoubleConstExpression(atof(yytext)); }
-&H0*[0-7][0-9a-f]{1,3}   { yylval.exp = new ast::IntConstExpression(strtol(yytext+2, nullptr, 16)); return CONST; }
-&H0*[89a-f][0-9a-f]{1,3} { yylval.exp = new ast::IntConstExpression(strtol(yytext+2, nullptr, 16) - 65536); return CONST; }
-&O0*[0-7]{1,5}           { yylval.exp = new ast::IntConstExpression(strtol(yytext+2, nullptr, 8)); return CONST; }
-&0*[0-7]{1,5}            { yylval.exp = new ast::IntConstExpression(strtol(yytext+1, nullptr, 8)); return CONST; }
+{NUM}\!                  { yylval.exp = new ast::FloatConstExpression(atof(yytext)); return NUM_CONST; }
+{NUM}\#                  { yylval.exp = new ast::DoubleConstExpression(atof(yytext)); return NUM_CONST; }
+&H0*[0-7][0-9a-f]{1,3}   { yylval.exp = new ast::IntConstExpression(strtol(yytext+2, nullptr, 16)); return NUM_CONST; }
+&H0*[89a-f][0-9a-f]{1,3} { yylval.exp = new ast::IntConstExpression(strtol(yytext+2, nullptr, 16) - 65536); return NUM_CONST; }
+&O0*[0-7]{1,5}           { yylval.exp = new ast::IntConstExpression(strtol(yytext+2, nullptr, 8)); return NUM_CONST; }
+&0*[0-7]{1,5}            { yylval.exp = new ast::IntConstExpression(strtol(yytext+1, nullptr, 8)); return NUM_CONST; }
 
 LET    { return LET_KEYWORD; }
 DIM    { return DIM_KEYWORD; }
@@ -58,6 +49,8 @@ TROFF  { return TROFF_KEYWORD; }
 PRINT  { return PRINT_KEYWORD; }
 LINE\ +INPUT  { return LINE_INPUT_KEYWORD; }
 INPUT  { return INPUT_KEYWORD; }
+ON     { return ON_KEYWORD; }
+GOTO   { return GOTO_KEYWORD; }
 
 CSRLIN|DATE$|TIME$|ENVIRON\$|ERDEV|ERDEV\$|ERR|ERL|INKEY$ {
     yylval.name = new std::string(yytext, yyleng); return UNSUPPORTED_VAR;

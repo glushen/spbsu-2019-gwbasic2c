@@ -111,4 +111,21 @@ namespace ast {
         void provideInfo(ProgramInfo& programInfo) const override;
         void print(std::ostream& stream) const override;
     };
+
+    class GotoExpression: public Expression {
+    public:
+        const int lineNumber;
+        explicit GotoExpression(int lineNumber);
+        void provideInfo(ProgramInfo& programInfo) const override;
+        void print(std::ostream& stream) const override;
+    };
+
+    class OnGotoExpression: public Expression {
+    public:
+        const std::unique_ptr<Expression> expression;
+        const std::vector<int> lineNumbers;
+        OnGotoExpression(std::unique_ptr<Expression> expression, std::vector<int> lineNumbers);
+        void provideInfo(ProgramInfo& programInfo) const override;
+        void print(std::ostream& stream) const override;
+    };
 }

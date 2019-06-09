@@ -14,7 +14,7 @@ void ast::Line::provideInfo(ast::ProgramInfo& programInfo) const {
 }
 
 void ast::Line::print(std::ostream& stream) const {
-    stream << "line(" << lineNumber << ");";
+    stream << "L" << lineNumber << ": line(" << lineNumber << ");";
 
     if (comment[0] != '\0') {
         stream << " //" << comment;
@@ -64,14 +64,27 @@ void ast::printLogicFile(std::ostream& stream,
 }
 
 void ast::printProgram(std::ostream& stream, std::vector<ast::Line> lines) {
-    std::sort(lines.begin(), lines.end(), [](ast::Line& a, ast::Line& b) {
+    std::stable_sort(lines.begin(), lines.end(), [](const ast::Line& a, const ast::Line& b) {
         return a.lineNumber < b.lineNumber;
     });
+    lines.erase(std::unique(lines.begin(), lines.end(), [](ast::Line& a, ast::Line& b) {
+        return a.lineNumber == b.lineNumber;
+    }), lines.end());
+
+    std::set<int> existentLineNumbers;
+    for (auto& line : lines) {
+        existentLineNumbers.insert(line.lineNumber);
+    }
 
     ProgramInfo programInfo;
 
     for (auto& line : lines) {
         line.provideInfo(programInfo);
+        if (!std::includes(existentLineNumbers.begin(), existentLineNumbers.end(),
+                           programInfo.requiredLineNumbers.begin(), programInfo.requiredLineNumbers.end())) {
+            throw std::invalid_argument("Used line numbers are not found");
+        }
+        programInfo.requiredLineNumbers.clear();
     }
 
     std::set<const gw::core::File*> printedCoreFiles;
