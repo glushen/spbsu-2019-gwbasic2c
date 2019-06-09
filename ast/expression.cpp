@@ -1,3 +1,4 @@
+#include <utility>
 #include <memory>
 #include <cassert>
 #include "node.h"
@@ -318,4 +319,31 @@ void ast::PrintExpression::print(std::ostream& stream) const {
 
 void ast::PrintExpression::addExpression(unique_ptr<ast::Expression> expression) {
     expressions.push_back(convertToString(move(expression)));
+}
+
+ast::InputExpression::InputExpression(std::unique_ptr<Expression> prompt, vector<unique_ptr<ast::Expression>> expressions):
+        Expression(VOID),
+        prompt(std::move(prompt)),
+        expressions(std::move(expressions)) {
+    for (auto& expression : expressions) {
+        if (!isReference(expression->type)) {
+            throw std::invalid_argument("Expected reference, found " + to_string(expression->type));
+        }
+    }
+}
+
+void ast::InputExpression::provideInfo(ast::ProgramInfo& programInfo) const {
+    prompt->provideInfo(programInfo);
+    for (auto& expression : expressions) {
+        expression->provideInfo(programInfo);
+    }
+    programInfo.coreFiles.insert(gw_logic::core_input);
+}
+
+void ast::InputExpression::print(std::ostream& stream) const {
+    stream << "input(";
+    prompt->print(stream);
+    stream << ",{";
+    joinAndPrint(stream, expressions);
+    stream << "})";
 }

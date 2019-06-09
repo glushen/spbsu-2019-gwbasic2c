@@ -102,4 +102,13 @@ namespace ast {
         std::vector<std::unique_ptr<Expression>> expressions;
         const StringConstExpression newLineExpression;
     };
+
+    class InputExpression: public Expression {
+    public:
+        const std::unique_ptr<Expression> prompt;
+        const std::vector<std::unique_ptr<Expression>> expressions;
+        InputExpression(std::unique_ptr<Expression>, std::vector<std::unique_ptr<Expression>> expressions);
+        void provideInfo(ProgramInfo& programInfo) const override;
+        void print(std::ostream& stream) const override;
+    };
 }

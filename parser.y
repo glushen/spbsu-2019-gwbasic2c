@@ -45,7 +45,7 @@ template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*>
 %token <name> GW_FN_NAME_UNSUPPORTED GW_CMD_NAME_UNSUPPORTED GW_STM_NAME_UNSUPPORTED
 %token <name> GW_FN_NAME GW_CMD_NAME GW_STM_NAME
 %token <name> FN_VAR UNSUPPORTED_VAR
-%token LET_KEYWORD DIM_KEYWORD TRON_KEYWORD TROFF_KEYWORD PRINT_KEYWORD LINE_INPUT_KEYWORD
+%token LET_KEYWORD DIM_KEYWORD TRON_KEYWORD TROFF_KEYWORD PRINT_KEYWORD LINE_INPUT_KEYWORD INPUT_KEYWORD
 %token MOD_OPERATOR
 %token EQUAL_OPERATOR UNEQUAL_OPERATOR LESS_OPERATOR GREATER_OPERATOR LESS_EQUAL_OPERATOR GREATER_EQUAL_OPERATOR
 %token NOT_OPERATOR AND_OPERATOR OR_OPERATOR XOR_OPERATOR EQV_OPERATOR IMP_OPERATOR
@@ -60,8 +60,9 @@ template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*>
 %type <exp> EXP STATEMENT
 %type <expressions> EXP_LIST NOT_EMPTY_EXP_LIST
 %type <exp> LVALUE
+%type <expressions> LVALUE_LIST
 %type <printExp> PRINT_LIST
-%type <exp> OPTIONAL_PROMPT_STRING
+%type <exp> OPTIONAL_INPUT_PROMPT_STRING OPTIONAL_LINE_INPUT_PROMPT_STRING
 
 %nonassoc PRINT_KEYWORD
 %left IMP_OPERATOR
@@ -125,6 +126,10 @@ LVALUE:
     VARIABLE %prec VARIABLE_REDUCE  { $$ = $1; }
 |   VARIABLE '(' EXP_LIST ')'       { $$ = new ast::VectorGetElementExpression(move_ptr($1), move_ptr($3)); }
 
+LVALUE_LIST:
+    LVALUE                  { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->push_back(std::unique_ptr<ast::Expression>($1)); }
+|   LVALUE_LIST ',' LVALUE  { $$ = $1; $$->push_back(std::unique_ptr<ast::Expression>($3)); }
+
 PRINT_LIST:
     %empty                                 { $$ = new ast::PrintExpression(); }
 |   PRINT_LIST EXP %prec LOWER_THAN_MINUS  { $$ = $1; $$->addExpression(std::unique_ptr<ast::Expression>($2)); $$->printNewLine = true; }
@@ -135,9 +140,14 @@ OPTIONAL_SEMICOLON:
     %empty
 |   ';'
 
-OPTIONAL_PROMPT_STRING:
+OPTIONAL_LINE_INPUT_PROMPT_STRING:
     %empty     { $$ = new ast::StringConstExpression(""); }
 |   CONST ';'  { $$ = $1; }
+
+OPTIONAL_INPUT_PROMPT_STRING:
+    %empty     { $$ = new ast::StringConstExpression("? "); }
+|   CONST ';'  { $$ = ast::retrieveFunctionExpression("sum", move_vector<ast::Expression>({$1, new ast::StringConstExpression("? ")})).release(); }
+|   CONST ','  { $$ = $1; }
 
 EXP:
     CONST                      { $$ = $1; }
@@ -171,4 +181,5 @@ STATEMENT:
 |   TRON_KEYWORD                                    { $$ = ast::retrieveFunctionExpression("tron", {}).release(); }
 |   TROFF_KEYWORD                                   { $$ = ast::retrieveFunctionExpression("troff", {}).release(); }
 |   PRINT_KEYWORD PRINT_LIST                        { $$ = $2; }
-|   LINE_INPUT_KEYWORD OPTIONAL_SEMICOLON OPTIONAL_PROMPT_STRING LVALUE  { $$ = ast::retrieveFunctionExpression("lineinput", move_vector<ast::Expression>({$3, $4})).release(); }
+|   LINE_INPUT_KEYWORD OPTIONAL_SEMICOLON OPTIONAL_LINE_INPUT_PROMPT_STRING LVALUE  { $$ = ast::retrieveFunctionExpression("lineinput", move_vector<ast::Expression>({$3, $4})).release(); }
+|   INPUT_KEYWORD OPTIONAL_SEMICOLON OPTIONAL_INPUT_PROMPT_STRING LVALUE_LIST       { $$ = new ast::InputExpression(std::unique_ptr<ast::Expression>($3), move_ptr($4)); }

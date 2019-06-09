@@ -9,6 +9,7 @@
 
 namespace ast {
     std::string to_string(gw_logic::Type type);
+    bool isReference(gw_logic::Type type);
 
     class ProgramInfo {
     public:

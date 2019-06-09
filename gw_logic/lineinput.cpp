@@ -1,6 +1,7 @@
 #include "core/core.cpp"
 void lineinput(const std::string& prompt, std::string& result) {
     std::cout << prompt;
+    std::cout.flush();
     std::cin >> result;
     if (result.size() > 255) {
         result.resize(255);

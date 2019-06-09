@@ -57,6 +57,7 @@ TRON   { return TRON_KEYWORD; }
 TROFF  { return TROFF_KEYWORD; }
 PRINT  { return PRINT_KEYWORD; }
 LINE\ +INPUT  { return LINE_INPUT_KEYWORD; }
+INPUT  { return INPUT_KEYWORD; }
 
 CSRLIN|DATE$|TIME$|ENVIRON\$|ERDEV|ERDEV\$|ERR|ERL|INKEY$ {
     yylval.name = new std::string(yytext, yyleng); return UNSUPPORTED_VAR;

@@ -1,10 +1,5 @@
-#include "core/core.cpp"
+#include "core/to_double_or_nan.cpp"
 #include "core/check_d.cpp"
-double val(std::string string) {
-    for (char& c : string) {
-        if (c == 'd' || c == 'D') {
-            c = 'e';
-        }
-    }
-    return check_d(strtod(string.data(), nullptr));
+double val(const std::string& string) {
+    return check_d(to_double_or_nan(string));
 }

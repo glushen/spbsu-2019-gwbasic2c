@@ -21,4 +21,16 @@ std::string ast::to_string(gw_logic::Type type) {
     assert(false);
 }
 
+bool ast::isReference(gw_logic::Type type) {
+    switch (type) {
+        case INT_REF:
+        case FLOAT_REF:
+        case DOUBLE_REF:
+        case STRING_REF:
+            return true;
+        default:
+            return false;
+    }
+}
+
 ast::Node::~Node() = default;
