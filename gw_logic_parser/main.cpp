@@ -16,7 +16,7 @@ extern FILE* yyin;
 
 const regex SKIP_LINE_REGEX(R"(\s*#pragma\s+once\s*|\s*)");
 const regex INCLUDE_REGEX(R"(\s*#include\s+\"([^\"]+)\"\s*)");
-const regex CORE_INCLUDE_REGEX(R"(core\/\S+)");
+const regex CORE_INCLUDE_REGEX(R"(\.\.\/core\/\S+)");
 const regex GW_FUNCTION_NAME_REGEX(R"(([^_]+)(?:_.*)?)");
 
 map<string, CoreFileData> CORE_FILES_DATA;
