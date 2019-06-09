@@ -45,7 +45,7 @@ template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*>
 %token <name> GW_FN_NAME_UNSUPPORTED GW_CMD_NAME_UNSUPPORTED GW_STM_NAME_UNSUPPORTED
 %token <name> GW_FN_NAME GW_CMD_NAME GW_STM_NAME
 %token <name> FN_VAR UNSUPPORTED_VAR
-%token LET_KEYWORD DIM_KEYWORD TRON_KEYWORD TROFF_KEYWORD PRINT_KEYWORD
+%token LET_KEYWORD DIM_KEYWORD TRON_KEYWORD TROFF_KEYWORD PRINT_KEYWORD LINE_INPUT_KEYWORD
 %token MOD_OPERATOR
 %token EQUAL_OPERATOR UNEQUAL_OPERATOR LESS_OPERATOR GREATER_OPERATOR LESS_EQUAL_OPERATOR GREATER_EQUAL_OPERATOR
 %token NOT_OPERATOR AND_OPERATOR OR_OPERATOR XOR_OPERATOR EQV_OPERATOR IMP_OPERATOR
@@ -61,6 +61,7 @@ template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*>
 %type <expressions> EXP_LIST NOT_EMPTY_EXP_LIST
 %type <exp> LVALUE
 %type <printExp> PRINT_LIST
+%type <exp> OPTIONAL_PROMPT_STRING
 
 %nonassoc PRINT_KEYWORD
 %left IMP_OPERATOR
@@ -79,6 +80,9 @@ template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*>
 %left '*'
 %nonassoc UNARY_MINUS
 %left '^'
+
+%nonassoc VARIABLE_REDUCE
+%nonassoc '('
 
 %%
 
@@ -118,8 +122,8 @@ NOT_EMPTY_EXP_LIST:
 |   NOT_EMPTY_EXP_LIST ',' EXP  { $$ = $1; $$->push_back(std::unique_ptr<ast::Expression>($3)); }
 
 LVALUE:
-    VARIABLE                   { $$ = $1; }
-|   VARIABLE '(' EXP_LIST ')'  { $$ = new ast::VectorGetElementExpression(move_ptr($1), move_ptr($3)); }
+    VARIABLE %prec VARIABLE_REDUCE  { $$ = $1; }
+|   VARIABLE '(' EXP_LIST ')'       { $$ = new ast::VectorGetElementExpression(move_ptr($1), move_ptr($3)); }
 
 PRINT_LIST:
     %empty                                 { $$ = new ast::PrintExpression(); }
@@ -127,8 +131,17 @@ PRINT_LIST:
 |   PRINT_LIST ';'                         { $$ = $1; $$->printNewLine = false; }
 |   PRINT_LIST ','                         { $$ = $1; $$->addExpression(std::make_unique<ast::StringConstExpression>("    ")); $$->printNewLine = false; }
 
+OPTIONAL_SEMICOLON:
+    %empty
+|   ';'
+
+OPTIONAL_PROMPT_STRING:
+    %empty     { $$ = new ast::StringConstExpression(""); }
+|   CONST ';'  { $$ = $1; }
+
 EXP:
     CONST                      { $$ = $1; }
+|   LVALUE                     { $$ = $1; }
 |   '(' EXP ')'                { $$ = $2; }
 |   EXP '^' EXP                { $$ = ast::retrieveFunctionExpression("pow", move_vector<ast::Expression>({$1, $3})).release(); }
 |   '-' EXP %prec UNARY_MINUS  { $$ = ast::retrieveFunctionExpression("neg", move_vector<ast::Expression>({$2})).release(); }
@@ -158,3 +171,4 @@ STATEMENT:
 |   TRON_KEYWORD                                    { $$ = ast::retrieveFunctionExpression("tron", {}).release(); }
 |   TROFF_KEYWORD                                   { $$ = ast::retrieveFunctionExpression("troff", {}).release(); }
 |   PRINT_KEYWORD PRINT_LIST                        { $$ = $2; }
+|   LINE_INPUT_KEYWORD OPTIONAL_SEMICOLON OPTIONAL_PROMPT_STRING LVALUE  { $$ = ast::retrieveFunctionExpression("lineinput", move_vector<ast::Expression>({$3, $4})).release(); }
