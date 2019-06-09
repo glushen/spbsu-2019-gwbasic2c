@@ -7,8 +7,8 @@ find_package(FLEX)
 
 aux_source_directory(gw/core gw_core_source)
 aux_source_directory(gw/logic gw_logic_source)
-add_library(gw_logic EXCLUDE_FROM_ALL ${gw_core_source} ${gw_logic_source})
-target_link_libraries(gw_logic m)
+add_library(gw EXCLUDE_FROM_ALL ${gw_core_source} ${gw_logic_source})
+target_link_libraries(gw m)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -21,9 +21,9 @@ file(GLOB gw_core_files gw/core/*.cpp)
 file(GLOB gw_logic_files gw/logic/*.cpp)
 set(gw_logic_parser_arguments -core ${gw_core_files}
                               -logic ${gw_logic_files}
-                              -output ${CMAKE_CURRENT_BINARY_DIR}/gw_logic.h ${CMAKE_CURRENT_BINARY_DIR}/gw_logic.cpp)
+                              -output ${CMAKE_CURRENT_BINARY_DIR}/gw.h ${CMAKE_CURRENT_BINARY_DIR}/gw.cpp)
 add_custom_command(COMMAND gw_logic_parser ${gw_logic_parser_arguments}
-                   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/gw_logic.h ${CMAKE_CURRENT_BINARY_DIR}/gw_logic.cpp)
+                   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/gw.h ${CMAKE_CURRENT_BINARY_DIR}/gw.cpp)
 
 bison_target(parser parser.y ${CMAKE_CURRENT_BINARY_DIR}/parser.cpp
              DEFINES_FILE ${CMAKE_CURRENT_BINARY_DIR}/parser.h
@@ -34,7 +34,7 @@ add_executable(gwbasic2c
         main.cpp
         ${BISON_parser_OUTPUTS}
         ${FLEX_lexer_OUTPUTS}
-        ${CMAKE_CURRENT_BINARY_DIR}/gw_logic.h ${CMAKE_CURRENT_BINARY_DIR}/gw_logic.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/gw.h ${CMAKE_CURRENT_BINARY_DIR}/gw.cpp
         util.h util.cpp
         ast/node.h ast/node.cpp
         ast/expression.h ast/expression.cpp

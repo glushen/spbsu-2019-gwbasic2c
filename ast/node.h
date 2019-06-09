@@ -4,18 +4,17 @@
 #include <set>
 #include <ostream>
 #include <memory>
-#include <gw_logic.h>
-#include <cmake-build-debug/gw_logic.h>
+#include <gw.h>
 
 namespace ast {
-    std::string to_string(gw_logic::Type type);
-    bool isReference(gw_logic::Type type);
+    std::string to_string(gw::Type type);
+    bool isReference(gw::Type type);
 
     class ProgramInfo {
     public:
         std::set<std::string> variableDefinitions;
-        std::set<const gw_logic::CoreFile*> coreFiles;
-        std::set<const gw_logic::LogicFile*> logicFiles;
+        std::set<const gw::core::File*> coreFiles;
+        std::set<const gw::logic::File*> logicFiles;
     };
 
     class Node {

@@ -2,7 +2,6 @@
 #include "program.h"
 
 using namespace std;
-using namespace gw_logic;
 
 ast::Line::Line(int lineNumber, std::vector<std::unique_ptr<ast::Expression>> statementList, std::string comment):
         lineNumber(lineNumber),
@@ -13,7 +12,7 @@ void ast::Line::provideInfo(ast::ProgramInfo& programInfo) const {
     for (auto& statement : statementList) {
         statement->provideInfo(programInfo);
     }
-    programInfo.coreFiles.insert(gw_logic::core_core);
+    programInfo.coreFiles.insert(gw::core::core);
 }
 
 void ast::Line::print(ostream& stream) const {
@@ -33,14 +32,14 @@ void ast::Line::print(ostream& stream) const {
 }
 
 void ast::printCoreFile(std::ostream& stream,
-                        const gw_logic::CoreFile* coreFile,
-                        std::set<const gw_logic::CoreFile*>& printedCoreFiles) {
+                        const gw::core::File* coreFile,
+                        std::set<const gw::core::File*>& printedCoreFiles) {
     bool inserted = printedCoreFiles.insert(coreFile).second;
     if (!inserted) {
         return;
     }
 
-    for (auto dependency : coreFile->coreDependencyList) {
+    for (auto dependency : coreFile->coreDependencies) {
         printCoreFile(stream, dependency, printedCoreFiles);
     }
 
@@ -48,18 +47,18 @@ void ast::printCoreFile(std::ostream& stream,
 }
 
 void ast::printLogicFile(std::ostream& stream,
-                         const gw_logic::LogicFile* logicFile,
-                         std::set<const gw_logic::CoreFile*>& printedCoreFiles,
-                         std::set<const gw_logic::LogicFile*>& printedLogicFiles) {
+                         const gw::logic::File* logicFile,
+                         std::set<const gw::core::File*>& printedCoreFiles,
+                         std::set<const gw::logic::File*>& printedLogicFiles) {
     bool inserted = printedLogicFiles.insert(logicFile).second;
     if (!inserted) {
         return;
     }
 
-    for (auto dependency : logicFile->coreDependencyList) {
+    for (auto dependency : logicFile->coreDependencies) {
         printCoreFile(stream, dependency, printedCoreFiles);
     }
-    for (auto dependency : logicFile->logicDependencyList) {
+    for (auto dependency : logicFile->logicDependencies) {
         printLogicFile(stream, dependency, printedCoreFiles, printedLogicFiles);
     }
 
@@ -77,8 +76,8 @@ void ast::printProgram(std::ostream& stream, std::vector<ast::Line> lines) {
         line.provideInfo(programInfo);
     }
 
-    std::set<const gw_logic::CoreFile*> printedCoreFiles;
-    std::set<const gw_logic::LogicFile*> printedLogicFiles;
+    std::set<const gw::core::File*> printedCoreFiles;
+    std::set<const gw::logic::File*> printedLogicFiles;
 
     for (auto coreFile : programInfo.coreFiles) {
         printCoreFile(stream, coreFile, printedCoreFiles);

@@ -21,7 +21,7 @@ const regex GW_FUNCTION_NAME_REGEX(R"(([^_]+)(?:_.*)?)");
 
 map<string, CoreFileData> CORE_FILES_DATA;
 map<string, LogicFileData> LOGIC_FILES_DATA;
-map<string, vector<string>> LOGIC_FILES_BY_GW_FUNCTION_NAME;
+map<string, vector<string>> LOGIC_FILES_BY_FUNCTION_NAME;
 
 ofstream hout;
 ofstream cppout;
@@ -79,10 +79,10 @@ bool gw_types_comparator(const string &a, const string &b) {
         || (a == "FLOAT" && b == "DOUBLE");
 }
 
-void save_logic_file_by_gw_function_name(const string& gw_function_name,
-                                         const string& new_logic_filename,
-                                         const LogicFileData& new_data) {
-    auto& data_list = LOGIC_FILES_BY_GW_FUNCTION_NAME[gw_function_name];
+void save_logic_file_by_function_name(const string& gw_function_name,
+                                      const string& new_logic_filename,
+                                      const LogicFileData& new_data) {
+    auto& data_list = LOGIC_FILES_BY_FUNCTION_NAME[gw_function_name];
 
     int insert_index = 0;
 
@@ -137,7 +137,7 @@ void handle_function_signature(LogicFileData&& data) {
 
     smatch gw_function_name_match;
     regex_match(data.function_name, gw_function_name_match, GW_FUNCTION_NAME_REGEX);
-    save_logic_file_by_gw_function_name(gw_function_name_match[1], filename, data);
+    save_logic_file_by_function_name(gw_function_name_match[1], filename, data);
 }
 
 void print_core_file(const string& name) {
@@ -151,9 +151,9 @@ void print_core_file(const string& name) {
         print_core_file(util::filename_by_path(path));
     }
 
-    hout << "    extern const CoreFile* core_" << name << ";" << endl;
+    hout << "        extern const File* " << name << ";" << endl;
 
-    cppout << "const gw_logic::CoreFile* gw_logic::core_" << name << " = new gw_logic::CoreFile({ ";
+    cppout << "const gw::core::File* gw::core::" << name << " = new gw::core::File({ ";
     cppout << "\"" << name << "\", ";
 
     cppout << "{ ";
@@ -164,7 +164,7 @@ void print_core_file(const string& name) {
         } else {
             cppout << ", ";
         }
-        cppout << "core_" << util::filename_by_path(path);
+        cppout << "gw::core::" << util::filename_by_path(path);
     }
     cppout << " }, ";
 
@@ -192,9 +192,9 @@ void print_logic_file(const string& name) {
         }
     }
 
-    hout << "    extern const LogicFile* " << name << ";" << endl;
+    hout << "        extern const File* " << name << ";" << endl;
 
-    cppout << "const gw_logic::LogicFile* gw_logic::" << name << " = new gw_logic::LogicFile({ ";
+    cppout << "const gw::logic::File* gw::logic::" << name << " = new gw::logic::File({ ";
     cppout << "\"" << data.function_name << "\", ";
 
     cppout << "{ ";
@@ -205,7 +205,7 @@ void print_logic_file(const string& name) {
         } else {
             cppout << ", ";
         }
-        cppout << "core_" << filename;
+        cppout << "gw::core::" <<  filename;
     }
     cppout << " }, ";
 
@@ -217,11 +217,11 @@ void print_logic_file(const string& name) {
         } else {
             cppout << ", ";
         }
-        cppout << util::filename_by_path(path);
+        cppout << "gw::logic::" << util::filename_by_path(path);
     }
     cppout << " }, ";
 
-    cppout << "gw_logic::" << data.return_type << ", ";
+    cppout << "gw::" << data.return_type << ", ";
 
     cppout << "{ ";
     first = true;
@@ -231,7 +231,7 @@ void print_logic_file(const string& name) {
         } else {
             cppout << ", ";
         }
-        cppout << "gw_logic::" << argument_type;
+        cppout << "gw::" << argument_type;
     }
     cppout << " }, ";
 
@@ -279,51 +279,56 @@ int main(int count, char* arguments[]) {
 #include <vector>
 #include <string>
 
-namespace gw_logic {
+namespace gw {
     using std::map, std::vector, std::string;
 
     enum Type {
         INT, FLOAT, DOUBLE, STRING, INT_REF, FLOAT_REF, DOUBLE_REF, STRING_REF, VOID
     };
 
-    struct CoreFile {
-        string name;
-        vector<const CoreFile*> coreDependencyList;
-        string code;
-    };
-
-    struct LogicFile {
-        string name;
-        vector<const CoreFile*> coreDependencyList;
-        vector<const LogicFile*> logicDependencyList;
-        Type returnType;
-        vector<Type> argumentTypeList;
-        string code;
-    };
+    namespace core {
+        struct File {
+            string name;
+            vector<const File*> coreDependencies;
+            string code;
+        };
 
 )";
 
-    cppout << "#include \"gw_logic.h\"" << endl << endl;
+    cppout << "#include \"gw.h\"" << endl << endl;
 
     for (auto& name_and_data : CORE_FILES_DATA) {
         print_core_file(name_and_data.first);
     }
 
-    hout << endl;
+    hout << R"(    }
+
+    namespace logic {
+        struct File {
+            string name;
+            vector<const core::File*> coreDependencies;
+            vector<const logic::File*> logicDependencies;
+            Type returnType;
+            vector<Type> argumentTypes;
+            string code;
+        };
+
+)";
 
     for (auto& name_and_data : LOGIC_FILES_DATA) {
         print_logic_file(name_and_data.first);
     }
 
     hout << endl;
-    hout << "    extern const map<string, vector<const LogicFile*>> LOGIC_FILES_BY_GW_FUNCTION_NAME;" << endl;
+    hout << "        extern const map<string, vector<const File*>> BY_FUNCTION_NAME;" << endl;
+    hout << "    }" << endl;
     hout << '}' << endl;
 
     cppout << endl;
-    cppout << "const std::map<std::string, std::vector<const gw_logic::LogicFile*>> gw_logic::LOGIC_FILES_BY_GW_FUNCTION_NAME = {" << endl;
+    cppout << "const std::map<std::string, std::vector<const gw::logic::File*>> gw::logic::BY_FUNCTION_NAME = {" << endl;
 
     int first = true;
-    for (auto& name_and_filenames : LOGIC_FILES_BY_GW_FUNCTION_NAME) {
+    for (auto& name_and_filenames : LOGIC_FILES_BY_FUNCTION_NAME) {
         if (first) {
             first = false;
         } else {
@@ -339,7 +344,7 @@ namespace gw_logic {
             } else {
                 cppout << ", ";
             }
-            cppout << filename;
+            cppout << "gw::logic::" << filename;
         }
         cppout << " }";
 

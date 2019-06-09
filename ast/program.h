@@ -15,13 +15,13 @@ namespace ast {
     };
 
     void printCoreFile(std::ostream& stream,
-                       const gw_logic::CoreFile* coreFile,
-                       std::set<const gw_logic::CoreFile*>& printedCoreFiles);
+                       const gw::core::File* coreFile,
+                       std::set<const gw::core::File*>& printedCoreFiles);
 
     void printLogicFile(std::ostream& stream,
-                        const gw_logic::LogicFile* logicFile,
-                        std::set<const gw_logic::CoreFile*>& printedCoreFiles,
-                        std::set<const gw_logic::LogicFile*>& printedLogicFiles);
+                        const gw::logic::File* logicFile,
+                        std::set<const gw::core::File*>& printedCoreFiles,
+                        std::set<const gw::logic::File*>& printedLogicFiles);
 
     void printProgram(std::ostream& stream, std::vector<ast::Line> lines);
 }

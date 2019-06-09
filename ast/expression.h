@@ -4,13 +4,13 @@
 namespace ast {
     class Expression: public Node {
     public:
-        const gw_logic::Type type;
-        explicit Expression(gw_logic::Type type);
+        const gw::Type type;
+        explicit Expression(gw::Type type);
     };
 
     class ConstExpression: public Expression {
     public:
-        ConstExpression(gw_logic::Type type, std::string&& valueToPrint);
+        ConstExpression(gw::Type type, std::string&& valueToPrint);
         void provideInfo(ProgramInfo& programInfo) const override;
         void print(std::ostream& stream) const override;
     private:
@@ -40,7 +40,7 @@ namespace ast {
     class VariableExpression: public Expression {
     public:
         const std::string name;
-        VariableExpression(std::string name, gw_logic::Type type);
+        VariableExpression(std::string name, gw::Type type);
         std::string getPrintableType() const;
         std::string getPrintableName() const;
         std::string getPrintableDefaultValue() const;
@@ -68,9 +68,9 @@ namespace ast {
 
     class FunctionExpression: public Expression {
     public:
-        const gw_logic::LogicFile* logicFile;
+        const gw::logic::File* logicFile;
         const std::vector<std::unique_ptr<Expression>> argumentList;
-        FunctionExpression(const gw_logic::LogicFile* logicFile, std::vector<std::unique_ptr<Expression>> argumentList);
+        FunctionExpression(const gw::logic::File* logicFile, std::vector<std::unique_ptr<Expression>> argumentList);
         void provideInfo(ProgramInfo& programInfo) const override;
         void print(std::ostream& stream) const override;
     };
@@ -80,15 +80,15 @@ namespace ast {
     class CastedExpression: public Expression {
     public:
         const std::unique_ptr<Expression> expression;
-        CastedExpression(std::unique_ptr<Expression> expression, gw_logic::Type type);
+        CastedExpression(std::unique_ptr<Expression> expression, gw::Type type);
         void provideInfo(ProgramInfo& programInfo) const override;
         void print(std::ostream& stream) const override;
     };
 
-    bool castableImplicitly(gw_logic::Type sourceType, gw_logic::Type targetType);
-    bool castableExplicitly(gw_logic::Type sourceType, gw_logic::Type targetType);
-    std::unique_ptr<Expression> castOrThrow(std::unique_ptr<Expression> expression, gw_logic::Type targetType);
-    std::vector<std::unique_ptr<Expression>> castOrThrow(std::vector<std::unique_ptr<Expression>> expressions, gw_logic::Type targetType);
+    bool castableImplicitly(gw::Type sourceType, gw::Type targetType);
+    bool castableExplicitly(gw::Type sourceType, gw::Type targetType);
+    std::unique_ptr<Expression> castOrThrow(std::unique_ptr<Expression> expression, gw::Type targetType);
+    std::vector<std::unique_ptr<Expression>> castOrThrow(std::vector<std::unique_ptr<Expression>> expressions, gw::Type targetType);
     std::unique_ptr<Expression> convertToString(std::unique_ptr<Expression> expression);
 
     class PrintExpression: public Expression {

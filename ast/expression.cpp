@@ -6,12 +6,11 @@
 #include "util.h"
 
 using namespace std;
-using namespace gw_logic;
 
-ast::Expression::Expression(Type type):
+ast::Expression::Expression(gw::Type type):
         type(type) { }
 
-ast::ConstExpression::ConstExpression(gw_logic::Type type, std::string&& valueToPrint):
+ast::ConstExpression::ConstExpression(gw::Type type, std::string&& valueToPrint):
         Expression(type),
         valueToPrint(valueToPrint) { }
 
@@ -24,45 +23,45 @@ void ast::ConstExpression::print(ostream& stream) const {
 }
 
 ast::IntConstExpression::IntConstExpression(short value):
-        ConstExpression(INT, util::to_string("%d", value)) { }
+        ConstExpression(gw::INT, util::to_string("%d", value)) { }
 
 ast::FloatConstExpression::FloatConstExpression(float value):
-        ConstExpression(FLOAT, util::to_string("%.7g", value)) { }
+        ConstExpression(gw::FLOAT, util::to_string("%.7g", value)) { }
 
 ast::DoubleConstExpression::DoubleConstExpression(double value):
-        ConstExpression(DOUBLE, util::to_string("%.16g", value)) { }
+        ConstExpression(gw::DOUBLE, util::to_string("%.16g", value)) { }
 
 ast::StringConstExpression::StringConstExpression(const std::string& value):
-        ConstExpression(STRING, '"' + util::escape(value) + '"') { }
+        ConstExpression(gw::STRING, '"' + util::escape(value) + '"') { }
 
-ast::VariableExpression::VariableExpression(std::string name, gw_logic::Type type):
+ast::VariableExpression::VariableExpression(std::string name, gw::Type type):
         Expression(type),
         name(std::move(name)) {
-    assert(type == INT_REF || type == FLOAT_REF || type == DOUBLE_REF || type == STRING_REF);
+    assert(isReference(type));
 }
 
 std::string ast::VariableExpression::getPrintableType() const {
     switch (type) {
-        case INT_REF: return "gw_int";
-        case FLOAT_REF: return "float";
-        case DOUBLE_REF: return "double";
-        case STRING_REF: return "std::string";
+        case gw::INT_REF: return "gw_int";
+        case gw::FLOAT_REF: return "float";
+        case gw::DOUBLE_REF: return "double";
+        case gw::STRING_REF: return "std::string";
         default: assert(false);
     }
 }
 
 std::string ast::VariableExpression::getPrintableName() const {
     switch (type) {
-        case INT_REF: return "_" + name + "_i";
-        case FLOAT_REF: return "_" + name + "_f";
-        case DOUBLE_REF: return "_" + name + "_d";
-        case STRING_REF: return "_" + name + "_s";
+        case gw::INT_REF: return "_" + name + "_i";
+        case gw::FLOAT_REF: return "_" + name + "_f";
+        case gw::DOUBLE_REF: return "_" + name + "_d";
+        case gw::STRING_REF: return "_" + name + "_s";
         default: assert(false);
     }
 }
 
 std::string ast::VariableExpression::getPrintableDefaultValue() const {
-    return type == STRING_REF ? "\"\"" : "0";
+    return type == gw::STRING_REF ? "\"\"" : "0";
 }
 
 void ast::VariableExpression::provideInfo(ast::ProgramInfo& programInfo) const {
@@ -74,14 +73,14 @@ void ast::VariableExpression::print(ostream& stream) const {
 }
 
 ast::VectorDimExpression::VectorDimExpression(VariableExpression variable, std::vector<std::unique_ptr<Expression>> new_sizes):
-        Expression(VOID),
+        Expression(gw::VOID),
         variable(std::move(variable)),
-        new_sizes(castOrThrow(std::move(new_sizes), INT)) { }
+        new_sizes(castOrThrow(std::move(new_sizes), gw::INT)) { }
 
 void ast::VectorDimExpression::provideInfo(ast::ProgramInfo& programInfo) const {
     programInfo.variableDefinitions.insert("std::vector<" + variable.getPrintableType() + "> " + variable.getPrintableName() + "v = { }");
     programInfo.variableDefinitions.insert("std::vector<gw_int> " + variable.getPrintableName() + "i = { }");
-    programInfo.coreFiles.insert(gw_logic::core_vector);
+    programInfo.coreFiles.insert(gw::core::vector);
     for (auto& child : new_sizes) {
         child->provideInfo(programInfo);
     }
@@ -96,12 +95,12 @@ void ast::VectorDimExpression::print(std::ostream& stream) const {
 ast::VectorGetElementExpression::VectorGetElementExpression(VariableExpression variable, std::vector<std::unique_ptr<Expression>> indexes):
         Expression(variable.type),
         variable(std::move(variable)),
-        indexes(castOrThrow(std::move(indexes), INT)) { }
+        indexes(castOrThrow(std::move(indexes), gw::INT)) { }
 
 void ast::VectorGetElementExpression::provideInfo(ast::ProgramInfo& programInfo) const {
     programInfo.variableDefinitions.insert("std::vector<" + variable.getPrintableType() + "> " + variable.getPrintableName() + "v = { }");
     programInfo.variableDefinitions.insert("std::vector<gw_int> " + variable.getPrintableName() + "i = { }");
-    programInfo.coreFiles.insert(gw_logic::core_vector);
+    programInfo.coreFiles.insert(gw::core::vector);
     for (auto& child : indexes) {
         child->provideInfo(programInfo);
     }
@@ -113,7 +112,7 @@ void ast::VectorGetElementExpression::print(std::ostream& stream) const {
     stream << "})";
 }
 
-ast::FunctionExpression::FunctionExpression(const LogicFile* logicFile, std::vector<std::unique_ptr<Expression>> argumentList):
+ast::FunctionExpression::FunctionExpression(const gw::logic::File* logicFile, std::vector<std::unique_ptr<Expression>> argumentList):
         Expression(logicFile->returnType),
         logicFile(logicFile),
         argumentList(std::move(argumentList)) { }
@@ -132,15 +131,15 @@ void ast::FunctionExpression::print(ostream& stream) const {
 }
 
 std::unique_ptr<ast::FunctionExpression> ast::retrieveFunctionExpression(const string& name, vector<unique_ptr<Expression>> argumentList) {
-    if (LOGIC_FILES_BY_GW_FUNCTION_NAME.count(name) == 0) {
+    if (gw::logic::BY_FUNCTION_NAME.count(name) == 0) {
         throw std::invalid_argument("Function " + name + " is not found");
     }
 
-    auto& logicFiles = LOGIC_FILES_BY_GW_FUNCTION_NAME.at(name);
-    const LogicFile* correctableLogicFile = nullptr;
+    auto& logicFiles = gw::logic::BY_FUNCTION_NAME.at(name);
+    const gw::logic::File* correctableLogicFile = nullptr;
 
     for (auto logicFile: logicFiles) {
-        if (logicFile->argumentTypeList.size() != argumentList.size()) {
+        if (logicFile->argumentTypes.size() != argumentList.size()) {
             continue;
         }
 
@@ -148,8 +147,8 @@ std::unique_ptr<ast::FunctionExpression> ast::retrieveFunctionExpression(const s
         bool logicFileIsCorrectable = true;
 
         for (int i = 0; i < argumentList.size(); i++) {
-            Type actualType = argumentList[i]->type;
-            Type expectedType = logicFile->argumentTypeList[i];
+            gw::Type actualType = argumentList[i]->type;
+            gw::Type expectedType = logicFile->argumentTypes[i];
 
             bool typeIsCastableImplicitly = castableImplicitly(actualType, expectedType);
             logicFileIsCorrect = logicFileIsCorrect && typeIsCastableImplicitly;
@@ -169,7 +168,7 @@ std::unique_ptr<ast::FunctionExpression> ast::retrieveFunctionExpression(const s
 
     if (correctableLogicFile != nullptr) {
         for (int i = 0; i < argumentList.size(); i++) {
-            argumentList[i] = castOrThrow(std::move(argumentList[i]), correctableLogicFile->argumentTypeList[i]);
+            argumentList[i] = castOrThrow(std::move(argumentList[i]), correctableLogicFile->argumentTypes[i]);
         }
 
         return std::make_unique<ast::FunctionExpression>(correctableLogicFile, std::move(argumentList));
@@ -178,7 +177,7 @@ std::unique_ptr<ast::FunctionExpression> ast::retrieveFunctionExpression(const s
     throw std::invalid_argument("Function " + name + " with required signature is not found");
 }
 
-ast::CastedExpression::CastedExpression(std::unique_ptr<Expression> expression, gw_logic::Type type):
+ast::CastedExpression::CastedExpression(std::unique_ptr<Expression> expression, gw::Type type):
         Expression(type),
         expression(std::move(expression)) { }
 
@@ -190,55 +189,55 @@ void ast::CastedExpression::print(std::ostream& stream) const {
     expression->print(stream);
 }
 
-bool ast::castableImplicitly(gw_logic::Type sourceType, gw_logic::Type targetType) {
+bool ast::castableImplicitly(gw::Type sourceType, gw::Type targetType) {
     if (sourceType == targetType) return true;
 
     switch (targetType) {
-        case DOUBLE:
+        case gw::DOUBLE:
             switch (sourceType) {
-                case DOUBLE_REF:
-                case FLOAT:
-                case FLOAT_REF:
-                case INT:
-                case INT_REF:
+                case gw::DOUBLE_REF:
+                case gw::FLOAT:
+                case gw::FLOAT_REF:
+                case gw::INT:
+                case gw::INT_REF:
                     return true;
                 default:
                     return false;
             }
-        case FLOAT:
+        case gw::FLOAT:
             switch (sourceType) {
-                case FLOAT_REF:
-                case INT:
-                case INT_REF:
+                case gw::FLOAT_REF:
+                case gw::INT:
+                case gw::INT_REF:
                     return true;
                 default:
                     return false;
             }
-        case INT:
-            return sourceType == INT_REF;
-        case STRING:
-            return sourceType == STRING_REF;
+        case gw::INT:
+            return sourceType == gw::INT_REF;
+        case gw::STRING:
+            return sourceType == gw::STRING_REF;
         default:
             return false;
     }
 }
 
-bool ast::castableExplicitly(gw_logic::Type sourceType, gw_logic::Type targetType) {
+bool ast::castableExplicitly(gw::Type sourceType, gw::Type targetType) {
     switch (targetType) {
-        case INT:
+        case gw::INT:
             switch (sourceType) {
-                case FLOAT:
-                case FLOAT_REF:
-                case DOUBLE:
-                case DOUBLE_REF:
+                case gw::FLOAT:
+                case gw::FLOAT_REF:
+                case gw::DOUBLE:
+                case gw::DOUBLE_REF:
                     return true;
                 default:
                     return false;
             }
-        case FLOAT:
+        case gw::FLOAT:
             switch (sourceType) {
-                case DOUBLE:
-                case DOUBLE_REF:
+                case gw::DOUBLE:
+                case gw::DOUBLE_REF:
                     return true;
                 default:
                     return false;
@@ -248,16 +247,16 @@ bool ast::castableExplicitly(gw_logic::Type sourceType, gw_logic::Type targetTyp
     }
 }
 
-std::unique_ptr<ast::Expression> ast::castOrThrow(std::unique_ptr<ast::Expression> expression, gw_logic::Type targetType) {
+std::unique_ptr<ast::Expression> ast::castOrThrow(std::unique_ptr<ast::Expression> expression, gw::Type targetType) {
     if (castableImplicitly(expression->type, targetType)) {
         return std::make_unique<CastedExpression>(std::move(expression), targetType);
     } else if (castableExplicitly(expression->type, targetType)) {
         string functionName;
         switch (targetType) {
-            case INT:
+            case gw::INT:
                 functionName = "cint";
                 break;
-            case FLOAT:
+            case gw::FLOAT:
                 functionName = "csng";
                 break;
             default:
@@ -272,7 +271,7 @@ std::unique_ptr<ast::Expression> ast::castOrThrow(std::unique_ptr<ast::Expressio
     }
 }
 
-std::vector<std::unique_ptr<ast::Expression>> ast::castOrThrow(std::vector<std::unique_ptr<Expression>> expressions, gw_logic::Type targetType) {
+std::vector<std::unique_ptr<ast::Expression>> ast::castOrThrow(std::vector<std::unique_ptr<Expression>> expressions, gw::Type targetType) {
     for (auto& expression : expressions) {
         expression = castOrThrow(std::move(expression), targetType);
     }
@@ -280,8 +279,8 @@ std::vector<std::unique_ptr<ast::Expression>> ast::castOrThrow(std::vector<std::
 }
 
 unique_ptr<ast::Expression> ast::convertToString(unique_ptr<ast::Expression> expression) {
-    if (expression->type == STRING || expression->type == STRING_REF) {
-        return std::make_unique<CastedExpression>(std::move(expression), STRING);
+    if (expression->type == gw::STRING || expression->type == gw::STRING_REF) {
+        return std::make_unique<CastedExpression>(std::move(expression), gw::STRING);
     } else {
         vector<unique_ptr<Expression>> arguments;
         arguments.push_back(move(expression));
@@ -290,14 +289,14 @@ unique_ptr<ast::Expression> ast::convertToString(unique_ptr<ast::Expression> exp
 }
 
 ast::PrintExpression::PrintExpression():
-        Expression(VOID),
+        Expression(gw::VOID),
         newLineExpression("\n") { }
 
 void ast::PrintExpression::provideInfo(ast::ProgramInfo& programInfo) const {
     for (auto& expression : expressions) {
         expression->provideInfo(programInfo);
     }
-    programInfo.coreFiles.insert(gw_logic::core_print);
+    programInfo.coreFiles.insert(gw::core::print);
     if (printNewLine) {
         newLineExpression.provideInfo(programInfo);
     }
@@ -322,7 +321,7 @@ void ast::PrintExpression::addExpression(unique_ptr<ast::Expression> expression)
 }
 
 ast::InputExpression::InputExpression(std::unique_ptr<Expression> prompt, vector<unique_ptr<ast::Expression>> expressions):
-        Expression(VOID),
+        Expression(gw::VOID),
         prompt(std::move(prompt)),
         expressions(std::move(expressions)) {
     for (auto& expression : expressions) {
@@ -337,7 +336,7 @@ void ast::InputExpression::provideInfo(ast::ProgramInfo& programInfo) const {
     for (auto& expression : expressions) {
         expression->provideInfo(programInfo);
     }
-    programInfo.coreFiles.insert(gw_logic::core_input);
+    programInfo.coreFiles.insert(gw::core::input);
 }
 
 void ast::InputExpression::print(std::ostream& stream) const {
