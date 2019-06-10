@@ -48,7 +48,7 @@ template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*>
 %token <name> FN_VAR UNSUPPORTED_VAR
 %token LET_KEYWORD DIM_KEYWORD TRON_KEYWORD TROFF_KEYWORD PRINT_KEYWORD LINE_INPUT_KEYWORD INPUT_KEYWORD
 %token IF_KEYWORD THEN_KEYWORD ELSE_KEYWORD ON_KEYWORD GOTO_KEYWORD WHILE_KEYWORD WEND_KEYWORD
-%token SWAP_KEYWORD STOP_KEYWORD END_KEYWORD RANDOMIZE_KEYWORD RND_KEYWORD MID_KEYWORD
+%token SWAP_KEYWORD STOP_KEYWORD END_KEYWORD RANDOMIZE_KEYWORD RND_KEYWORD MID_KEYWORD ERASE_KEYWORD
 %token MOD_OPERATOR
 %token EQUAL_OPERATOR UNEQUAL_OPERATOR LESS_OPERATOR GREATER_OPERATOR LESS_EQUAL_OPERATOR GREATER_EQUAL_OPERATOR
 %token NOT_OPERATOR AND_OPERATOR OR_OPERATOR XOR_OPERATOR EQV_OPERATOR IMP_OPERATOR
@@ -61,6 +61,7 @@ template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*>
 %type <lines> PROGRAM LINE_LIST
 %type <line> LINE
 %type <expressions> STATEMENT_LIST NOT_EMPTY_STATEMENT_LIST THEN_STATEMENTS ELSE_STATEMENTS
+%type <expressions> STATEMENT_SUBLIST DIM_LIST ERASE_LIST
 %type <exp> EXP STATEMENT
 %type <expressions> EXP_LIST NOT_EMPTY_EXP_LIST
 %type <exp> LVALUE
@@ -115,8 +116,10 @@ STATEMENT_LIST:
 |   NOT_EMPTY_STATEMENT_LIST { $$ = $1; }
 
 NOT_EMPTY_STATEMENT_LIST:
-    STATEMENT                               { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->push_back(std::unique_ptr<ast::Expression>($1)); }
-|   NOT_EMPTY_STATEMENT_LIST ':' STATEMENT  { $$ = $1; $$->push_back(std::unique_ptr<ast::Expression>($3)); }
+    STATEMENT                                       { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->push_back(std::unique_ptr<ast::Expression>($1)); }
+|   STATEMENT_SUBLIST                               { $$ = $1; }
+|   NOT_EMPTY_STATEMENT_LIST ':' STATEMENT          { $$ = $1; $$->push_back(std::unique_ptr<ast::Expression>($3)); }
+|   NOT_EMPTY_STATEMENT_LIST ':' STATEMENT_SUBLIST  { $$ = $1; std::move($3->begin(), $3->end(), std::back_inserter(*$$)); delete $3; }
 
 OPTIONAL_COMMENT:
     %empty           { $$ = new std::string(); }
@@ -179,6 +182,14 @@ ELSE_STATEMENTS:
 |   ELSE_KEYWORD LINE_NUMBER                { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->push_back(std::make_unique<ast::GotoExpression>($2)); }
 |   ELSE_KEYWORD NOT_EMPTY_STATEMENT_LIST   { $$ = $2; }
 
+DIM_LIST:
+    DIM_KEYWORD VARIABLE '(' EXP_LIST ')'   { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->emplace_back(new ast::VectorDimExpression(move_ptr($2), move_ptr($4))); }
+|   DIM_LIST ',' VARIABLE '(' EXP_LIST ')'  { $$ = $1; $$->emplace_back(new ast::VectorDimExpression(move_ptr($3), move_ptr($5))); }
+
+ERASE_LIST:
+    ERASE_KEYWORD VARIABLE                  { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->emplace_back(new ast::VectorEraseExpression(move_ptr($2))); }
+|   ERASE_LIST ',' VARIABLE                 { $$ = $1; $$->emplace_back(new ast::VectorEraseExpression(move_ptr($3))); }
+
 EXP:
     NUM_CONST                  { $$ = $1; }
 |   LINE_NUMBER                { if ($1 < 32768) $$ = new ast::IntConstExpression($1); else $$ = new ast::FloatConstExpression($1); }
@@ -213,7 +224,6 @@ EXP:
 
 STATEMENT:
     OPTIONAL_LET_KEYWORD LVALUE EQUAL_OPERATOR EXP  { $$ = ast::asFunction("let", move_vector<ast::Expression>({$2, $4})).release(); }
-|   DIM_KEYWORD VARIABLE '(' EXP_LIST ')'           { $$ = new ast::VectorDimExpression(move_ptr($2), move_ptr($4)); }
 |   TRON_KEYWORD                                    { $$ = ast::asFunction("tron", {}).release(); }
 |   TROFF_KEYWORD                                   { $$ = ast::asFunction("troff", {}).release(); }
 |   PRINT_KEYWORD PRINT_LIST                        { $$ = $2; }
@@ -231,3 +241,7 @@ STATEMENT:
 |   RANDOMIZE_KEYWORD EXP                           { $$ = ast::asFunction("randomize", move_vector<ast::Expression>({$2})).release(); }
 |   MID_KEYWORD '(' LVALUE ',' EXP ',' EXP ')' EQUAL_OPERATOR EXP  { $$ = ast::asFunction("mid$", move_vector<ast::Expression>({$3, $5, $7, $10})).release(); }
 |   MID_KEYWORD '(' LVALUE ',' EXP ')' EQUAL_OPERATOR EXP          { $$ = ast::asFunction("mid$", move_vector<ast::Expression>({$3, $5, new ast::IntConstExpression(255), $8})).release(); }
+
+STATEMENT_SUBLIST:
+    DIM_LIST    { $$ = $1; } %prec LOWER_THAN_COMMA
+|   ERASE_LIST  { $$ = $1; } %prec LOWER_THAN_COMMA

@@ -111,6 +111,21 @@ void ast::VectorGetElementExpression::print(std::ostream& stream) const {
     stream << "})";
 }
 
+ast::VectorEraseExpression::VectorEraseExpression(ast::VariableExpression variable):
+        Expression(gw::VOID),
+        variable(std::move(variable)) { }
+
+void ast::VectorEraseExpression::provideInfo(ast::ProgramInfo& programInfo) const {
+    programInfo.variableDefinitions.insert("std::vector<" + variable.getPrintableType() + "> " + variable.getPrintableName() + "v = { }");
+    programInfo.variableDefinitions.insert("std::vector<gw_int> " + variable.getPrintableName() + "i = { }");
+    programInfo.coreFiles.insert(gw::core::vector_erase);
+    variable.provideInfo(programInfo);
+}
+
+void ast::VectorEraseExpression::print(std::ostream& stream) const {
+    stream << "erase(" << variable.getPrintableName() << "v," << variable.getPrintableName() << "i)";
+}
+
 ast::FunctionExpression::FunctionExpression(const gw::logic::File* logicFile, std::vector<std::unique_ptr<Expression>> argumentList):
         Expression(logicFile->returnType),
         logicFile(logicFile),

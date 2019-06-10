@@ -66,6 +66,14 @@ namespace ast {
         void print(std::ostream& stream) const override;
     };
 
+    class VectorEraseExpression: public Expression {
+    public:
+        const VariableExpression variable;
+        explicit VectorEraseExpression(VariableExpression variable);
+        void provideInfo(ProgramInfo& programInfo) const override;
+        void print(std::ostream& stream) const override;
+    };
+
     class FunctionExpression: public Expression {
     public:
         const gw::logic::File* logicFile;
