@@ -48,6 +48,7 @@ template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*>
 %token <name> FN_VAR UNSUPPORTED_VAR
 %token LET_KEYWORD DIM_KEYWORD TRON_KEYWORD TROFF_KEYWORD PRINT_KEYWORD LINE_INPUT_KEYWORD INPUT_KEYWORD
 %token IF_KEYWORD THEN_KEYWORD ELSE_KEYWORD ON_KEYWORD GOTO_KEYWORD WHILE_KEYWORD WEND_KEYWORD
+%token SWAP_KEYWORD STOP_KEYWORD END_KEYWORD RANDOMIZE_KEYWORD RND_KEYWORD MID_KEYWORD
 %token MOD_OPERATOR
 %token EQUAL_OPERATOR UNEQUAL_OPERATOR LESS_OPERATOR GREATER_OPERATOR LESS_EQUAL_OPERATOR GREATER_EQUAL_OPERATOR
 %token NOT_OPERATOR AND_OPERATOR OR_OPERATOR XOR_OPERATOR EQV_OPERATOR IMP_OPERATOR
@@ -93,7 +94,7 @@ template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*>
 %nonassoc UNARY_MINUS
 %left '^'
 
-%nonassoc VARIABLE_REDUCE
+%nonassoc LOWER_THAN_PARENTHESIS
 %nonassoc '('
 
 %%
@@ -134,8 +135,8 @@ NOT_EMPTY_EXP_LIST:
 |   NOT_EMPTY_EXP_LIST ',' EXP  { $$ = $1; $$->push_back(std::unique_ptr<ast::Expression>($3)); }
 
 LVALUE:
-    VARIABLE %prec VARIABLE_REDUCE  { $$ = $1; }
-|   VARIABLE '(' EXP_LIST ')'       { $$ = new ast::VectorGetElementExpression(move_ptr($1), move_ptr($3)); }
+    VARIABLE %prec LOWER_THAN_PARENTHESIS  { $$ = $1; }
+|   VARIABLE '(' EXP_LIST ')'              { $$ = new ast::VectorGetElementExpression(move_ptr($1), move_ptr($3)); }
 
 LVALUE_LIST:
     LVALUE                  { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->push_back(std::unique_ptr<ast::Expression>($1)); }
@@ -205,6 +206,10 @@ EXP:
 |   EXP EQV_OPERATOR EXP            { $$ = ast::asFunction("eqv", move_vector<ast::Expression>({$1, $3})).release(); }
 |   EXP IMP_OPERATOR EXP            { $$ = ast::asFunction("imp", move_vector<ast::Expression>({$1, $3})).release(); }
 |   GW_FN_NAME '(' EXP_LIST ')'     { $$ = ast::asFunction(move_ptr($1), move_ptr($3)).release(); }
+|   RND_KEYWORD %prec LOWER_THAN_PARENTHESIS  { $$ = ast::asFunction("rnd", move_vector<ast::Expression>({new ast::IntConstExpression(1)})).release(); }
+|   RND_KEYWORD '(' EXP ')'                   { $$ = ast::asFunction("rnd", move_vector<ast::Expression>({$3})).release(); }
+|   MID_KEYWORD '(' EXP ',' EXP ',' EXP ')'   { $$ = ast::asFunction("mid$", move_vector<ast::Expression>({$3, $5, $7})).release(); }
+|   MID_KEYWORD '(' EXP ',' EXP ')'           { $$ = ast::asFunction("mid$", move_vector<ast::Expression>({$3, $5, new ast::IntConstExpression(255)})).release(); }
 
 STATEMENT:
     OPTIONAL_LET_KEYWORD LVALUE EQUAL_OPERATOR EXP  { $$ = ast::asFunction("let", move_vector<ast::Expression>({$2, $4})).release(); }
@@ -219,3 +224,10 @@ STATEMENT:
 |   IF_KEYWORD EXP OPTIONAL_COMMA THEN_STATEMENTS OPTIONAL_COMMA ELSE_STATEMENTS { $$ = new ast::IfExpression(std::unique_ptr<ast::Expression>($2), move_ptr($4), move_ptr($6)); }
 |   WHILE_KEYWORD EXP                               { $$ = new ast::WhileExpression(std::unique_ptr<ast::Expression>($2)); }
 |   WEND_KEYWORD                                    { $$ = new ast::WendExpression(); }
+|   SWAP_KEYWORD LVALUE ',' LVALUE                  { $$ = ast::asFunction("swap", move_vector<ast::Expression>({$2, $4})).release(); }
+|   STOP_KEYWORD                                    { $$ = ast::asFunction("stop", {}).release(); }
+|   END_KEYWORD                                     { $$ = ast::asFunction("end", {}).release(); }
+|   RANDOMIZE_KEYWORD                               { $$ = ast::asFunction("randomize", {}).release(); }
+|   RANDOMIZE_KEYWORD EXP                           { $$ = ast::asFunction("randomize", move_vector<ast::Expression>({$2})).release(); }
+|   MID_KEYWORD '(' LVALUE ',' EXP ',' EXP ')' EQUAL_OPERATOR EXP  { $$ = ast::asFunction("mid$", move_vector<ast::Expression>({$3, $5, $7, $10})).release(); }
+|   MID_KEYWORD '(' LVALUE ',' EXP ')' EQUAL_OPERATOR EXP          { $$ = ast::asFunction("mid$", move_vector<ast::Expression>({$3, $5, new ast::IntConstExpression(255), $8})).release(); }

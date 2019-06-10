@@ -63,8 +63,11 @@ void input(const std::string& prompt, const std::vector<InputReceiver>& receiver
                 } else if (receiver.f) {
                     *(receiver.f) = doubleValue;
                 } else if (receiver.i) {
-                    assert(-32768.5 < doubleValue && doubleValue < 32767.5, OVERFLOW);
-                    *(receiver.i) = lround(doubleValue);
+                    if (-32768.5 < doubleValue && doubleValue < 32767.5) {
+                        *(receiver.i) = lround(doubleValue);
+                    } else {
+                        invalidInput = true;
+                    }
                 }
             }
         }

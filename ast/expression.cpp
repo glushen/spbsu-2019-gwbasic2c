@@ -129,7 +129,11 @@ void ast::FunctionExpression::print(std::ostream& stream) const {
     stream << ')';
 }
 
-std::unique_ptr<ast::FunctionExpression> ast::asFunction(const std::string& name, std::vector<std::unique_ptr<Expression>> argumentList) {
+std::unique_ptr<ast::FunctionExpression> ast::asFunction(std::string name, std::vector<std::unique_ptr<Expression>> argumentList) {
+    for (auto& c : name) {
+        c = std::tolower(c);
+    }
+
     if (gw::logic::BY_FUNCTION_NAME.count(name) == 0) {
         throw std::invalid_argument("Function " + name + " is not found");
     }
