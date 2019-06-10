@@ -46,7 +46,8 @@ template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*>
 %token <name> GW_FN_NAME_UNSUPPORTED GW_CMD_NAME_UNSUPPORTED GW_STM_NAME_UNSUPPORTED
 %token <name> GW_FN_NAME GW_CMD_NAME GW_STM_NAME
 %token <name> FN_VAR UNSUPPORTED_VAR
-%token LET_KEYWORD DIM_KEYWORD TRON_KEYWORD TROFF_KEYWORD PRINT_KEYWORD LINE_INPUT_KEYWORD INPUT_KEYWORD ON_KEYWORD GOTO_KEYWORD
+%token LET_KEYWORD DIM_KEYWORD TRON_KEYWORD TROFF_KEYWORD PRINT_KEYWORD LINE_INPUT_KEYWORD INPUT_KEYWORD
+%token IF_KEYWORD THEN_KEYWORD ELSE_KEYWORD ON_KEYWORD GOTO_KEYWORD
 %token MOD_OPERATOR
 %token EQUAL_OPERATOR UNEQUAL_OPERATOR LESS_OPERATOR GREATER_OPERATOR LESS_EQUAL_OPERATOR GREATER_EQUAL_OPERATOR
 %token NOT_OPERATOR AND_OPERATOR OR_OPERATOR XOR_OPERATOR EQV_OPERATOR IMP_OPERATOR
@@ -58,7 +59,7 @@ template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*>
 %type <comment> OPTIONAL_COMMENT
 %type <lines> PROGRAM LINE_LIST
 %type <line> LINE
-%type <expressions> STATEMENT_LIST NOT_EMPTY_STATEMENT_LIST
+%type <expressions> STATEMENT_LIST NOT_EMPTY_STATEMENT_LIST THEN_STATEMENTS ELSE_STATEMENTS
 %type <exp> EXP STATEMENT
 %type <expressions> EXP_LIST NOT_EMPTY_EXP_LIST
 %type <exp> LVALUE
@@ -66,7 +67,15 @@ template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*>
 %type <printExp> PRINT_LIST
 %type <exp> OPTIONAL_INPUT_PROMPT_STRING OPTIONAL_LINE_INPUT_PROMPT_STRING
 
+%nonassoc LOWER_THAN_ELSE_AND_COLON
+%nonassoc ELSE_KEYWORD
+%nonassoc ':'
+
 %nonassoc PRINT_KEYWORD
+
+%nonassoc LOWER_THAN_COMMA
+%nonassoc ','
+
 %left IMP_OPERATOR
 %left EQV_OPERATOR
 %left XOR_OPERATOR
@@ -155,6 +164,20 @@ LINE_NUMBER_LIST:
     LINE_NUMBER                       { $$ = new std::vector<int>(); $$->push_back($1); }
 |   LINE_NUMBER_LIST ',' LINE_NUMBER  { $$ = $1; $$->push_back($3); }
 
+OPTIONAL_COMMA:
+    %empty %prec LOWER_THAN_COMMA
+|   ','
+
+THEN_STATEMENTS:
+    GOTO_KEYWORD LINE_NUMBER                { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->push_back(std::make_unique<ast::GotoExpression>($2)); }
+|   THEN_KEYWORD LINE_NUMBER                { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->push_back(std::make_unique<ast::GotoExpression>($2)); }
+|   THEN_KEYWORD NOT_EMPTY_STATEMENT_LIST %prec LOWER_THAN_ELSE_AND_COLON  { $$ = $2; }
+
+ELSE_STATEMENTS:
+    %empty %prec LOWER_THAN_ELSE_AND_COLON  { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); }
+|   ELSE_KEYWORD LINE_NUMBER                { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->push_back(std::make_unique<ast::GotoExpression>($2)); }
+|   ELSE_KEYWORD NOT_EMPTY_STATEMENT_LIST   { $$ = $2; }
+
 EXP:
     NUM_CONST                  { $$ = $1; }
 |   LINE_NUMBER                { if ($1 < 32768) $$ = new ast::IntConstExpression($1); else $$ = new ast::FloatConstExpression($1); }
@@ -190,6 +213,7 @@ STATEMENT:
 |   TROFF_KEYWORD                                   { $$ = ast::asFunction("troff", {}).release(); }
 |   PRINT_KEYWORD PRINT_LIST                        { $$ = $2; }
 |   LINE_INPUT_KEYWORD OPTIONAL_SEMICOLON OPTIONAL_LINE_INPUT_PROMPT_STRING LVALUE  { $$ = ast::asFunction("lineinput", move_vector<ast::Expression>({$3, $4})).release(); }
-|   INPUT_KEYWORD OPTIONAL_SEMICOLON OPTIONAL_INPUT_PROMPT_STRING LVALUE_LIST       { $$ = new ast::InputExpression(std::unique_ptr<ast::Expression>($3), move_ptr($4)); }
+|   INPUT_KEYWORD OPTIONAL_SEMICOLON OPTIONAL_INPUT_PROMPT_STRING LVALUE_LIST %prec LOWER_THAN_COMMA  { $$ = new ast::InputExpression(std::unique_ptr<ast::Expression>($3), move_ptr($4)); }
 |   GOTO_KEYWORD LINE_NUMBER                        { $$ = new ast::GotoExpression($2); }
-|   ON_KEYWORD EXP GOTO_KEYWORD LINE_NUMBER_LIST    { $$ = new ast::OnGotoExpression(std::unique_ptr<ast::Expression>($2), move_ptr($4)); }
+|   ON_KEYWORD EXP GOTO_KEYWORD LINE_NUMBER_LIST %prec LOWER_THAN_COMMA          { $$ = new ast::OnGotoExpression(std::unique_ptr<ast::Expression>($2), move_ptr($4)); }
+|   IF_KEYWORD EXP OPTIONAL_COMMA THEN_STATEMENTS OPTIONAL_COMMA ELSE_STATEMENTS { $$ = new ast::IfExpression(std::unique_ptr<ast::Expression>($2), move_ptr($4), move_ptr($6)); }

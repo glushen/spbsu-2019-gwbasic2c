@@ -128,4 +128,14 @@ namespace ast {
         void provideInfo(ProgramInfo& programInfo) const override;
         void print(std::ostream& stream) const override;
     };
+
+    class IfExpression: public Expression {
+    public:
+        const std::unique_ptr<Expression> condition;
+        const std::vector<std::unique_ptr<Expression>> thanStatements;
+        const std::vector<std::unique_ptr<Expression>> elseStatements;
+        IfExpression(std::unique_ptr<Expression> condition, std::vector<std::unique_ptr<Expression>> thanStatements, std::vector<std::unique_ptr<Expression>> elseStatements);
+        void provideInfo(ProgramInfo& programInfo) const override;
+        void print(std::ostream& stream) const override;
+    };
 }

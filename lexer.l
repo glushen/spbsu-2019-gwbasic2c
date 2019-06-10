@@ -51,6 +51,9 @@ LINE\ +INPUT  { return LINE_INPUT_KEYWORD; }
 INPUT  { return INPUT_KEYWORD; }
 ON     { return ON_KEYWORD; }
 GOTO   { return GOTO_KEYWORD; }
+IF     { return IF_KEYWORD; }
+THEN   { return THEN_KEYWORD; }
+ELSE   { return ELSE_KEYWORD; }
 
 CSRLIN|DATE$|TIME$|ENVIRON\$|ERDEV|ERDEV\$|ERR|ERL|INKEY$ {
     yylval.name = new std::string(yytext, yyleng); return UNSUPPORTED_VAR;

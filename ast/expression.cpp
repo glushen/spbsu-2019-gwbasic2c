@@ -377,3 +377,35 @@ void ast::OnGotoExpression::print(std::ostream& stream) const {
     }
     stream << " }";
 }
+
+ast::IfExpression::IfExpression(std::unique_ptr<ast::Expression> condition,
+                                std::vector<std::unique_ptr<ast::Expression>> thanStatements,
+                                std::vector<std::unique_ptr<ast::Expression>> elseStatements):
+        Expression(gw::VOID),
+        condition(castOrThrow(std::move(condition), gw::DOUBLE)),
+        thanStatements(std::move(thanStatements)),
+        elseStatements(std::move(elseStatements)) { }
+
+void ast::IfExpression::provideInfo(ast::ProgramInfo& programInfo) const {
+    condition->provideInfo(programInfo);
+    for (auto& statement : thanStatements) {
+        statement->provideInfo(programInfo);
+    }
+    for (auto& statement : elseStatements) {
+        statement->provideInfo(programInfo);
+    }
+}
+
+void ast::IfExpression::print(std::ostream& stream) const {
+    stream << "if (";
+    condition->print(stream);
+    stream << ") { ";
+    joinAndPrint(stream, thanStatements, "; ");
+    stream << "; }";
+
+    if (!elseStatements.empty()) {
+        stream << " else { ";
+        joinAndPrint(stream, elseStatements, "; ");
+        stream << "; }";
+    }
+}
