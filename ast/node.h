@@ -16,6 +16,7 @@ namespace ast {
         std::set<const gw::core::File*> coreFiles;
         std::set<const gw::logic::File*> logicFiles;
         std::set<int> requiredLineNumbers;
+        int openedWhileLoopsCount = 0;
     };
 
     class Node {

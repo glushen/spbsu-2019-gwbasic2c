@@ -138,4 +138,19 @@ namespace ast {
         void provideInfo(ProgramInfo& programInfo) const override;
         void print(std::ostream& stream) const override;
     };
+
+    class WhileExpression: public Expression {
+    public:
+        const std::unique_ptr<Expression> condition;
+        explicit WhileExpression(std::unique_ptr<Expression> condition);
+        void provideInfo(ProgramInfo& programInfo) const override;
+        void print(std::ostream& stream) const override;
+    };
+
+    class WendExpression: public Expression {
+    public:
+        WendExpression();
+        void provideInfo(ProgramInfo& programInfo) const override;
+        void print(std::ostream& stream) const override;
+    };
 }

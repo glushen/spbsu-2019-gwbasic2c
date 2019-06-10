@@ -1,6 +1,7 @@
 #include <utility>
 #include <memory>
 #include <cassert>
+#include <cmake-build-debug/gw.h>
 #include "node.h"
 #include "expression.h"
 #include "util.h"
@@ -408,4 +409,33 @@ void ast::IfExpression::print(std::ostream& stream) const {
         joinAndPrint(stream, elseStatements, "; ");
         stream << "; }";
     }
+}
+
+ast::WhileExpression::WhileExpression(std::unique_ptr<ast::Expression> condition):
+        Expression(gw::VOID),
+        condition(castOrThrow(std::move(condition), gw::DOUBLE)) { }
+
+void ast::WhileExpression::provideInfo(ast::ProgramInfo& programInfo) const {
+    condition->provideInfo(programInfo);
+    programInfo.openedWhileLoopsCount++;
+}
+
+void ast::WhileExpression::print(std::ostream& stream) const {
+    stream << "while (";
+    condition->print(stream);
+    stream << ") {";
+}
+
+ast::WendExpression::WendExpression():
+        Expression(gw::VOID) { }
+
+void ast::WendExpression::provideInfo(ast::ProgramInfo& programInfo) const {
+    if (programInfo.openedWhileLoopsCount <= 0) {
+         throw std::invalid_argument("Expected WHILE before WEND");
+    }
+    programInfo.openedWhileLoopsCount--;
+}
+
+void ast::WendExpression::print(std::ostream& stream) const {
+    stream << "}";
 }

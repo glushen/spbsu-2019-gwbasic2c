@@ -47,7 +47,7 @@ template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*>
 %token <name> GW_FN_NAME GW_CMD_NAME GW_STM_NAME
 %token <name> FN_VAR UNSUPPORTED_VAR
 %token LET_KEYWORD DIM_KEYWORD TRON_KEYWORD TROFF_KEYWORD PRINT_KEYWORD LINE_INPUT_KEYWORD INPUT_KEYWORD
-%token IF_KEYWORD THEN_KEYWORD ELSE_KEYWORD ON_KEYWORD GOTO_KEYWORD
+%token IF_KEYWORD THEN_KEYWORD ELSE_KEYWORD ON_KEYWORD GOTO_KEYWORD WHILE_KEYWORD WEND_KEYWORD
 %token MOD_OPERATOR
 %token EQUAL_OPERATOR UNEQUAL_OPERATOR LESS_OPERATOR GREATER_OPERATOR LESS_EQUAL_OPERATOR GREATER_EQUAL_OPERATOR
 %token NOT_OPERATOR AND_OPERATOR OR_OPERATOR XOR_OPERATOR EQV_OPERATOR IMP_OPERATOR
@@ -217,3 +217,5 @@ STATEMENT:
 |   GOTO_KEYWORD LINE_NUMBER                        { $$ = new ast::GotoExpression($2); }
 |   ON_KEYWORD EXP GOTO_KEYWORD LINE_NUMBER_LIST %prec LOWER_THAN_COMMA          { $$ = new ast::OnGotoExpression(std::unique_ptr<ast::Expression>($2), move_ptr($4)); }
 |   IF_KEYWORD EXP OPTIONAL_COMMA THEN_STATEMENTS OPTIONAL_COMMA ELSE_STATEMENTS { $$ = new ast::IfExpression(std::unique_ptr<ast::Expression>($2), move_ptr($4), move_ptr($6)); }
+|   WHILE_KEYWORD EXP                               { $$ = new ast::WhileExpression(std::unique_ptr<ast::Expression>($2)); }
+|   WEND_KEYWORD                                    { $$ = new ast::WendExpression(); }

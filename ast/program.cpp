@@ -67,9 +67,11 @@ void ast::printProgram(std::ostream& stream, std::vector<ast::Line> lines) {
     std::stable_sort(lines.begin(), lines.end(), [](const ast::Line& a, const ast::Line& b) {
         return a.lineNumber < b.lineNumber;
     });
+    std::reverse(lines.begin(), lines.end());
     lines.erase(std::unique(lines.begin(), lines.end(), [](ast::Line& a, ast::Line& b) {
         return a.lineNumber == b.lineNumber;
     }), lines.end());
+    std::reverse(lines.begin(), lines.end());
 
     std::set<int> existentLineNumbers;
     for (auto& line : lines) {
@@ -85,6 +87,10 @@ void ast::printProgram(std::ostream& stream, std::vector<ast::Line> lines) {
             throw std::invalid_argument("Used line numbers are not found");
         }
         programInfo.requiredLineNumbers.clear();
+    }
+
+    if (programInfo.openedWhileLoopsCount > 0) {
+        throw std::invalid_argument("No WEND for " + std::to_string(programInfo.openedWhileLoopsCount) + " WHILE(s)");
     }
 
     std::set<const gw::core::File*> printedCoreFiles;

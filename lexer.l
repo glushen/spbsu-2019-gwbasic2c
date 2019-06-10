@@ -54,6 +54,8 @@ GOTO   { return GOTO_KEYWORD; }
 IF     { return IF_KEYWORD; }
 THEN   { return THEN_KEYWORD; }
 ELSE   { return ELSE_KEYWORD; }
+WHILE  { return WHILE_KEYWORD; }
+WEND   { return WEND_KEYWORD; }
 
 CSRLIN|DATE$|TIME$|ENVIRON\$|ERDEV|ERDEV\$|ERR|ERL|INKEY$ {
     yylval.name = new std::string(yytext, yyleng); return UNSUPPORTED_VAR;
