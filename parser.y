@@ -5,27 +5,11 @@
 #include <vector>
 #include <memory>
 #include <ast/program.h>
+#include <parser_helper.h>
 
 extern int yylex(void);
 extern int yylineno;
 void yyerror(const char *s, ...);
-void handleResult(std::vector<ast::Line> lines);
-
-template<typename T> T move_ptr(T* ptr) {
-    T value = std::move(*ptr);
-    delete ptr;
-    return value;
-}
-template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*> vector) {
-    std::vector<std::unique_ptr<T>> result;
-    result.reserve(vector.size());
-
-    for (auto& item : vector) {
-        result.push_back(std::unique_ptr<T>(item));
-    }
-
-    return result;
-}
 }
 
 %union {
@@ -101,28 +85,28 @@ template<typename T> std::vector<std::unique_ptr<T>> move_vector(std::vector<T*>
 %%
 
 PROGRAM:
-    LINE_LIST END_OF_FILE { $$ = $1; handleResult(move_ptr($$)); YYACCEPT; }
+    LINE_LIST END_OF_FILE { $$ = $1; ph::handleResult(ph::unwrap($$)); YYACCEPT; }
 
 LINE_LIST:
-    LINE                { $$ = new std::vector<ast::Line>(); if ($1 != nullptr) $$->push_back(move_ptr($1)); }
-|   LINE_LIST '\n' LINE { $$ = $1; if ($3 != nullptr) $$->push_back(move_ptr($3)); }
+    LINE                { $$ = new std::vector<ast::Line>(); if ($1 != nullptr) $$->push_back(ph::unwrap($1)); }
+|   LINE_LIST '\n' LINE { $$ = $1; if ($3 != nullptr) $$->push_back(ph::unwrap($3)); }
 
 LINE:
     %empty                                      { $$ = nullptr; }
-|   LINE_NUMBER STATEMENT_LIST OPTIONAL_COMMENT { $$ = new ast::Line($1, move_ptr($2), move_ptr($3)); }
+|   LINE_NUMBER STATEMENT_LIST OPTIONAL_COMMENT { $$ = new ast::Line($1, ph::unwrap($2), ph::unwrap($3)); }
 
 STATEMENT_LIST:
-    %empty                   { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); }
+    %empty                   { $$ = ph::newExpressionVector(); }
 |   NOT_EMPTY_STATEMENT_LIST { $$ = $1; }
 
 NOT_EMPTY_STATEMENT_LIST:
-    STATEMENT                                       { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->push_back(std::unique_ptr<ast::Expression>($1)); }
+    STATEMENT                                       { $$ = ph::newExpressionVector($1); }
 |   STATEMENT_SUBLIST                               { $$ = $1; }
-|   NOT_EMPTY_STATEMENT_LIST ':' STATEMENT          { $$ = $1; $$->push_back(std::unique_ptr<ast::Expression>($3)); }
+|   NOT_EMPTY_STATEMENT_LIST ':' STATEMENT          { $$ = $1; $$->emplace_back($3); }
 |   NOT_EMPTY_STATEMENT_LIST ':' STATEMENT_SUBLIST  { $$ = $1; std::move($3->begin(), $3->end(), std::back_inserter(*$$)); delete $3; }
 
 OPTIONAL_COMMENT:
-    %empty           { $$ = new std::string(); }
+    %empty           { $$ = new std::string; }
 |   COMMENT          { $$ = $1; }
 
 OPTIONAL_LET_KEYWORD:
@@ -130,24 +114,24 @@ OPTIONAL_LET_KEYWORD:
 |   LET_KEYWORD
 
 EXP_LIST:
-    %empty              { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); }
+    %empty              { $$ = ph::newExpressionVector(); }
 |   NOT_EMPTY_EXP_LIST  { $$ = $1; }
 
 NOT_EMPTY_EXP_LIST:
-    EXP                         { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->push_back(std::unique_ptr<ast::Expression>($1)); }
-|   NOT_EMPTY_EXP_LIST ',' EXP  { $$ = $1; $$->push_back(std::unique_ptr<ast::Expression>($3)); }
+    EXP                         { $$ = ph::newExpressionVector($1); }
+|   NOT_EMPTY_EXP_LIST ',' EXP  { $$ = $1; $$->emplace_back($3); }
 
 LVALUE:
     VARIABLE %prec LOWER_THAN_PARENTHESIS  { $$ = $1; }
-|   VARIABLE '(' EXP_LIST ')'              { $$ = new ast::VectorGetElementExpression(move_ptr($1), move_ptr($3)); }
+|   VARIABLE '(' EXP_LIST ')'              { $$ = new ast::VectorGetElementExpression(ph::unwrap($1), ph::unwrap($3)); }
 
 LVALUE_LIST:
-    LVALUE                  { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->push_back(std::unique_ptr<ast::Expression>($1)); }
-|   LVALUE_LIST ',' LVALUE  { $$ = $1; $$->push_back(std::unique_ptr<ast::Expression>($3)); }
+    LVALUE                  { $$ = ph::newExpressionVector($1); }
+|   LVALUE_LIST ',' LVALUE  { $$ = $1; $$->emplace_back($3); }
 
 PRINT_LIST:
     %empty                                 { $$ = new ast::PrintExpression(); }
-|   PRINT_LIST EXP %prec LOWER_THAN_MINUS  { $$ = $1; $$->addExpression(std::unique_ptr<ast::Expression>($2)); $$->printNewLine = true; }
+|   PRINT_LIST EXP %prec LOWER_THAN_MINUS  { $$ = $1; $$->addExpression(ph::intoUniquePtr($2)); $$->printNewLine = true; }
 |   PRINT_LIST ';'                         { $$ = $1; $$->printNewLine = false; }
 |   PRINT_LIST ','                         { $$ = $1; $$->addExpression(std::make_unique<ast::StringConstExpression>("    ")); $$->printNewLine = false; }
 
@@ -161,7 +145,7 @@ OPTIONAL_LINE_INPUT_PROMPT_STRING:
 
 OPTIONAL_INPUT_PROMPT_STRING:
     %empty            { $$ = new ast::StringConstExpression("? "); }
-|   STRING_CONST ';'  { $$ = ast::asFunction("sum", move_vector<ast::Expression>({$1, new ast::StringConstExpression("? ")})).release(); }
+|   STRING_CONST ';'  { $$ = ph::asFunction("sum", {$1, new ast::StringConstExpression("? ")}); }
 |   STRING_CONST ','  { $$ = $1; }
 
 LINE_NUMBER_LIST:
@@ -173,22 +157,22 @@ OPTIONAL_COMMA:
 |   ','
 
 THEN_STATEMENTS:
-    GOTO_KEYWORD LINE_NUMBER                { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->push_back(std::make_unique<ast::GotoExpression>($2)); }
-|   THEN_KEYWORD LINE_NUMBER                { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->push_back(std::make_unique<ast::GotoExpression>($2)); }
+    GOTO_KEYWORD LINE_NUMBER                { $$ = ph::newExpressionVector(new ast::GotoExpression($2)); }
+|   THEN_KEYWORD LINE_NUMBER                { $$ = ph::newExpressionVector(new ast::GotoExpression($2)); }
 |   THEN_KEYWORD NOT_EMPTY_STATEMENT_LIST %prec LOWER_THAN_ELSE_AND_COLON  { $$ = $2; }
 
 ELSE_STATEMENTS:
-    %empty %prec LOWER_THAN_ELSE_AND_COLON  { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); }
-|   ELSE_KEYWORD LINE_NUMBER                { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->push_back(std::make_unique<ast::GotoExpression>($2)); }
+    %empty %prec LOWER_THAN_ELSE_AND_COLON  { $$ = ph::newExpressionVector(); }
+|   ELSE_KEYWORD LINE_NUMBER                { $$ = ph::newExpressionVector(new ast::GotoExpression($2)); }
 |   ELSE_KEYWORD NOT_EMPTY_STATEMENT_LIST   { $$ = $2; }
 
 DIM_LIST:
-    DIM_KEYWORD VARIABLE '(' EXP_LIST ')'   { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->emplace_back(new ast::VectorDimExpression(move_ptr($2), move_ptr($4))); }
-|   DIM_LIST ',' VARIABLE '(' EXP_LIST ')'  { $$ = $1; $$->emplace_back(new ast::VectorDimExpression(move_ptr($3), move_ptr($5))); }
+    DIM_KEYWORD VARIABLE '(' EXP_LIST ')'   { $$ = ph::newExpressionVector(new ast::VectorDimExpression(ph::unwrap($2), ph::unwrap($4))); }
+|   DIM_LIST ',' VARIABLE '(' EXP_LIST ')'  { $$ = $1; $$->emplace_back(new ast::VectorDimExpression(ph::unwrap($3), ph::unwrap($5))); }
 
 ERASE_LIST:
-    ERASE_KEYWORD VARIABLE                  { $$ = new std::vector<std::unique_ptr<ast::Expression>>(); $$->emplace_back(new ast::VectorEraseExpression(move_ptr($2))); }
-|   ERASE_LIST ',' VARIABLE                 { $$ = $1; $$->emplace_back(new ast::VectorEraseExpression(move_ptr($3))); }
+    ERASE_KEYWORD VARIABLE                  { $$ = ph::newExpressionVector(new ast::VectorEraseExpression(ph::unwrap($2))); }
+|   ERASE_LIST ',' VARIABLE                 { $$ = $1; $$->emplace_back(new ast::VectorEraseExpression(ph::unwrap($3))); }
 
 EXP:
     NUM_CONST                  { $$ = $1; }
@@ -196,51 +180,51 @@ EXP:
 |   STRING_CONST               { $$ = $1; }
 |   LVALUE                     { $$ = $1; }
 |   '(' EXP ')'                { $$ = $2; }
-|   EXP '^' EXP                { $$ = ast::asFunction("pow", move_vector<ast::Expression>({$1, $3})).release(); }
-|   '-' EXP %prec UNARY_MINUS  { $$ = ast::asFunction("neg", move_vector<ast::Expression>({$2})).release(); }
-|   EXP '*' EXP                { $$ = ast::asFunction("mul", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP '/' EXP                { $$ = ast::asFunction("fdiv", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP '\\' EXP               { $$ = ast::asFunction("idiv", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP MOD_OPERATOR EXP       { $$ = ast::asFunction("mod", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP '+' EXP                { $$ = ast::asFunction("sum", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP '-' EXP                { $$ = ast::asFunction("sub", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP EQUAL_OPERATOR EXP          { $$ = ast::asFunction("equal", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP UNEQUAL_OPERATOR EXP        { $$ = ast::asFunction("unequal", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP LESS_OPERATOR EXP           { $$ = ast::asFunction("less", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP GREATER_OPERATOR EXP        { $$ = ast::asFunction("greater", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP LESS_EQUAL_OPERATOR EXP     { $$ = ast::asFunction("geq", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP GREATER_EQUAL_OPERATOR EXP  { $$ = ast::asFunction("leq", move_vector<ast::Expression>({$1, $3})).release(); }
-|   NOT_OPERATOR EXP                { $$ = ast::asFunction("not", move_vector<ast::Expression>({$2})).release(); }
-|   EXP AND_OPERATOR EXP            { $$ = ast::asFunction("and", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP OR_OPERATOR EXP             { $$ = ast::asFunction("or", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP XOR_OPERATOR EXP            { $$ = ast::asFunction("xor", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP EQV_OPERATOR EXP            { $$ = ast::asFunction("eqv", move_vector<ast::Expression>({$1, $3})).release(); }
-|   EXP IMP_OPERATOR EXP            { $$ = ast::asFunction("imp", move_vector<ast::Expression>({$1, $3})).release(); }
-|   GW_FN_NAME '(' EXP_LIST ')'     { $$ = ast::asFunction(move_ptr($1), move_ptr($3)).release(); }
-|   RND_KEYWORD %prec LOWER_THAN_PARENTHESIS  { $$ = ast::asFunction("rnd", move_vector<ast::Expression>({new ast::IntConstExpression(1)})).release(); }
-|   RND_KEYWORD '(' EXP ')'                   { $$ = ast::asFunction("rnd", move_vector<ast::Expression>({$3})).release(); }
-|   MID_KEYWORD '(' EXP ',' EXP ',' EXP ')'   { $$ = ast::asFunction("mid$", move_vector<ast::Expression>({$3, $5, $7})).release(); }
-|   MID_KEYWORD '(' EXP ',' EXP ')'           { $$ = ast::asFunction("mid$", move_vector<ast::Expression>({$3, $5, new ast::IntConstExpression(255)})).release(); }
+|   EXP '^' EXP                { $$ = ph::asFunction("pow", {$1, $3}); }
+|   '-' EXP %prec UNARY_MINUS  { $$ = ph::asFunction("neg", {$2}); }
+|   EXP '*' EXP                { $$ = ph::asFunction("mul", {$1, $3}); }
+|   EXP '/' EXP                { $$ = ph::asFunction("fdiv", {$1, $3}); }
+|   EXP '\\' EXP               { $$ = ph::asFunction("idiv", {$1, $3}); }
+|   EXP MOD_OPERATOR EXP       { $$ = ph::asFunction("mod", {$1, $3}); }
+|   EXP '+' EXP                { $$ = ph::asFunction("sum", {$1, $3}); }
+|   EXP '-' EXP                { $$ = ph::asFunction("sub", {$1, $3}); }
+|   EXP EQUAL_OPERATOR EXP          { $$ = ph::asFunction("equal", {$1, $3}); }
+|   EXP UNEQUAL_OPERATOR EXP        { $$ = ph::asFunction("unequal", {$1, $3}); }
+|   EXP LESS_OPERATOR EXP           { $$ = ph::asFunction("less", {$1, $3}); }
+|   EXP GREATER_OPERATOR EXP        { $$ = ph::asFunction("greater", {$1, $3}); }
+|   EXP LESS_EQUAL_OPERATOR EXP     { $$ = ph::asFunction("geq", {$1, $3}); }
+|   EXP GREATER_EQUAL_OPERATOR EXP  { $$ = ph::asFunction("leq", {$1, $3}); }
+|   NOT_OPERATOR EXP                { $$ = ph::asFunction("not", {$2}); }
+|   EXP AND_OPERATOR EXP            { $$ = ph::asFunction("and", {$1, $3}); }
+|   EXP OR_OPERATOR EXP             { $$ = ph::asFunction("or", {$1, $3}); }
+|   EXP XOR_OPERATOR EXP            { $$ = ph::asFunction("xor", {$1, $3}); }
+|   EXP EQV_OPERATOR EXP            { $$ = ph::asFunction("eqv", {$1, $3}); }
+|   EXP IMP_OPERATOR EXP            { $$ = ph::asFunction("imp", {$1, $3}); }
+|   GW_FN_NAME '(' EXP_LIST ')'     { $$ = ph::asFunction2(ph::unwrap($1), ph::unwrap($3)); }
+|   RND_KEYWORD %prec LOWER_THAN_PARENTHESIS  { $$ = ph::asFunction("rnd", {new ast::IntConstExpression(1)}); }
+|   RND_KEYWORD '(' EXP ')'                   { $$ = ph::asFunction("rnd", {$3}); }
+|   MID_KEYWORD '(' EXP ',' EXP ',' EXP ')'   { $$ = ph::asFunction("mid$", {$3, $5, $7}); }
+|   MID_KEYWORD '(' EXP ',' EXP ')'           { $$ = ph::asFunction("mid$", {$3, $5, new ast::IntConstExpression(255)}); }
 
 STATEMENT:
-    OPTIONAL_LET_KEYWORD LVALUE EQUAL_OPERATOR EXP  { $$ = ast::asFunction("let", move_vector<ast::Expression>({$2, $4})).release(); }
-|   TRON_KEYWORD                                    { $$ = ast::asFunction("tron", {}).release(); }
-|   TROFF_KEYWORD                                   { $$ = ast::asFunction("troff", {}).release(); }
+    OPTIONAL_LET_KEYWORD LVALUE EQUAL_OPERATOR EXP  { $$ = ph::asFunction("let", {$2, $4}); }
+|   TRON_KEYWORD                                    { $$ = ph::asFunction("tron", {}); }
+|   TROFF_KEYWORD                                   { $$ = ph::asFunction("troff", {}); }
 |   PRINT_KEYWORD PRINT_LIST                        { $$ = $2; }
-|   LINE_INPUT_KEYWORD OPTIONAL_SEMICOLON OPTIONAL_LINE_INPUT_PROMPT_STRING LVALUE  { $$ = ast::asFunction("lineinput", move_vector<ast::Expression>({$3, $4})).release(); }
-|   INPUT_KEYWORD OPTIONAL_SEMICOLON OPTIONAL_INPUT_PROMPT_STRING LVALUE_LIST %prec LOWER_THAN_COMMA  { $$ = new ast::InputExpression(std::unique_ptr<ast::Expression>($3), move_ptr($4)); }
+|   LINE_INPUT_KEYWORD OPTIONAL_SEMICOLON OPTIONAL_LINE_INPUT_PROMPT_STRING LVALUE  { $$ = ph::asFunction("lineinput", {$3, $4}); }
+|   INPUT_KEYWORD OPTIONAL_SEMICOLON OPTIONAL_INPUT_PROMPT_STRING LVALUE_LIST %prec LOWER_THAN_COMMA  { $$ = new ast::InputExpression(ph::intoUniquePtr($3), ph::unwrap($4)); }
 |   GOTO_KEYWORD LINE_NUMBER                        { $$ = new ast::GotoExpression($2); }
-|   ON_KEYWORD EXP GOTO_KEYWORD LINE_NUMBER_LIST %prec LOWER_THAN_COMMA          { $$ = new ast::OnGotoExpression(std::unique_ptr<ast::Expression>($2), move_ptr($4)); }
-|   IF_KEYWORD EXP OPTIONAL_COMMA THEN_STATEMENTS OPTIONAL_COMMA ELSE_STATEMENTS { $$ = new ast::IfExpression(std::unique_ptr<ast::Expression>($2), move_ptr($4), move_ptr($6)); }
-|   WHILE_KEYWORD EXP                               { $$ = new ast::WhileExpression(std::unique_ptr<ast::Expression>($2)); }
+|   ON_KEYWORD EXP GOTO_KEYWORD LINE_NUMBER_LIST %prec LOWER_THAN_COMMA          { $$ = new ast::OnGotoExpression(ph::intoUniquePtr($2), ph::unwrap($4)); }
+|   IF_KEYWORD EXP OPTIONAL_COMMA THEN_STATEMENTS OPTIONAL_COMMA ELSE_STATEMENTS { $$ = new ast::IfExpression(ph::intoUniquePtr($2), ph::unwrap($4), ph::unwrap($6)); }
+|   WHILE_KEYWORD EXP                               { $$ = new ast::WhileExpression(ph::intoUniquePtr($2)); }
 |   WEND_KEYWORD                                    { $$ = new ast::WendExpression(); }
-|   SWAP_KEYWORD LVALUE ',' LVALUE                  { $$ = ast::asFunction("swap", move_vector<ast::Expression>({$2, $4})).release(); }
-|   STOP_KEYWORD                                    { $$ = ast::asFunction("stop", {}).release(); }
-|   END_KEYWORD                                     { $$ = ast::asFunction("end", {}).release(); }
-|   RANDOMIZE_KEYWORD                               { $$ = ast::asFunction("randomize", {}).release(); }
-|   RANDOMIZE_KEYWORD EXP                           { $$ = ast::asFunction("randomize", move_vector<ast::Expression>({$2})).release(); }
-|   MID_KEYWORD '(' LVALUE ',' EXP ',' EXP ')' EQUAL_OPERATOR EXP  { $$ = ast::asFunction("mid$", move_vector<ast::Expression>({$3, $5, $7, $10})).release(); }
-|   MID_KEYWORD '(' LVALUE ',' EXP ')' EQUAL_OPERATOR EXP          { $$ = ast::asFunction("mid$", move_vector<ast::Expression>({$3, $5, new ast::IntConstExpression(255), $8})).release(); }
+|   SWAP_KEYWORD LVALUE ',' LVALUE                  { $$ = ph::asFunction("swap", {$2, $4}); }
+|   STOP_KEYWORD                                    { $$ = ph::asFunction("stop", {}); }
+|   END_KEYWORD                                     { $$ = ph::asFunction("end", {}); }
+|   RANDOMIZE_KEYWORD                               { $$ = ph::asFunction("randomize", {}); }
+|   RANDOMIZE_KEYWORD EXP                           { $$ = ph::asFunction("randomize", {$2}); }
+|   MID_KEYWORD '(' LVALUE ',' EXP ',' EXP ')' EQUAL_OPERATOR EXP  { $$ = ph::asFunction("mid$", {$3, $5, $7, $10}); }
+|   MID_KEYWORD '(' LVALUE ',' EXP ')' EQUAL_OPERATOR EXP          { $$ = ph::asFunction("mid$", {$3, $5, new ast::IntConstExpression(255), $8}); }
 
 STATEMENT_SUBLIST:
     DIM_LIST    { $$ = $1; } %prec LOWER_THAN_COMMA

@@ -35,6 +35,7 @@ add_executable(gwbasic2c
         ${BISON_parser_OUTPUTS}
         ${FLEX_lexer_OUTPUTS}
         ${CMAKE_CURRENT_BINARY_DIR}/gw.h ${CMAKE_CURRENT_BINARY_DIR}/gw.cpp
+        parser_helper.h parser_helper.cpp
         util.h util.cpp
         ast/node.h ast/node.cpp
         ast/expression.h ast/expression.cpp

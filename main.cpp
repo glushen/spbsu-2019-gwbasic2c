@@ -25,10 +25,6 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void handleResult(std::vector<ast::Line> lines) {
-    ast::printProgram(std::cout, std::move(lines));
-}
-
 void yyerror(const char *s, ...) {
     va_list ap;
     va_start(ap, s);
