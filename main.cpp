@@ -5,6 +5,7 @@
 #include "ast/program.h"
 
 int yy_utilityVariablesCount = 0;
+bool yy_hadErrors = false;
 
 int main(int argc, char* argv[]) {
     if (argc > 1) {
@@ -24,7 +25,7 @@ int main(int argc, char* argv[]) {
 
     yyparse();
 
-    return 0;
+    return yy_hadErrors ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 void yyerror(const char *s, ...) {
@@ -34,4 +35,5 @@ void yyerror(const char *s, ...) {
     vfprintf(stderr, s, ap);
     fprintf(stderr, "\n");
     va_end(ap);
+    yy_hadErrors = true;
 }

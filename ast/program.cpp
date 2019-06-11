@@ -1,6 +1,8 @@
 #include <utility>
 #include "program.h"
 
+extern void yyerror(const char *s, ...);
+
 ast::Line::Line(int lineNumber, std::vector<std::unique_ptr<ast::Expression>> statementList, std::string comment):
         lineNumber(lineNumber),
         statementList(std::move(statementList)),

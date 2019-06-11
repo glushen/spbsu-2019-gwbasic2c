@@ -44,7 +44,7 @@ extern int yy_utilityVariablesCount;
 
 %type <lineNumbers> LINE_NUMBER_LIST
 %type <comment> OPTIONAL_COMMENT
-%type <lines> PROGRAM LINE_LIST
+%type <lines> PROGRAM
 %type <line> LINE
 %type <expressions> STATEMENT_LIST NOT_EMPTY_STATEMENT_LIST THEN_STATEMENTS ELSE_STATEMENTS
 %type <expressions> STATEMENT_SUBLIST DIM_LIST ERASE_LIST
@@ -87,11 +87,11 @@ extern int yy_utilityVariablesCount;
 %%
 
 PROGRAM:
-    LINE_LIST END_OF_FILE { $$ = $1; ph::handleResult(ph::unwrap($$)); YYACCEPT; }
-
-LINE_LIST:
-    LINE                { $$ = new std::vector<ast::Line>(); if ($1 != nullptr) $$->push_back(ph::unwrap($1)); }
-|   LINE_LIST '\n' LINE { $$ = $1; if ($3 != nullptr) $$->push_back(ph::unwrap($3)); }
+    %empty                     { $$ = new std::vector<ast::Line>(); }
+|   PROGRAM LINE '\n'          { $$ = $1; if ($2 != nullptr) $$->push_back(ph::unwrap($2)); }
+|   PROGRAM error '\n'         { $$ = $1; yyerrok; }
+|   PROGRAM LINE END_OF_FILE   { $$ = $1; if ($2 != nullptr) $$->push_back(ph::unwrap($2)); ph::handleResult(ph::unwrap($$)); YYACCEPT; }
+|   PROGRAM error END_OF_FILE  { $$ = $1; yyerrok; YYABORT; }
 
 LINE:
     %empty                                      { $$ = nullptr; }
