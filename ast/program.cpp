@@ -93,6 +93,10 @@ void ast::printProgram(std::ostream& stream, std::vector<ast::Line> lines) {
         throw std::invalid_argument("No WEND for " + std::to_string(programInfo.openedWhileLoopsCount) + " WHILE(s)");
     }
 
+    if (!programInfo.forLoopsVariables.empty()) {
+        throw std::invalid_argument("No NEXT for " + std::to_string(programInfo.forLoopsVariables.size()) + " FOR(s)");
+    }
+
     std::set<const gw::core::File*> printedCoreFiles;
     std::set<const gw::logic::File*> printedLogicFiles;
 

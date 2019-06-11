@@ -463,3 +463,67 @@ void ast::WendExpression::provideInfo(ast::ProgramInfo& programInfo) const {
 void ast::WendExpression::print(std::ostream& stream) const {
     stream << "}";
 }
+
+ast::ForExpression::ForExpression(ast::VariableExpression mainVariable,
+                                  std::unique_ptr<ast::Expression> initialization1,
+                                  std::unique_ptr<ast::Expression> initialization2,
+                                  std::unique_ptr<ast::Expression> initialization3,
+                                  std::unique_ptr<ast::Expression> condition,
+                                  std::unique_ptr<ast::Expression> updating):
+        Expression(gw::VOID),
+        mainVariable(std::move(mainVariable)),
+        initialization1(std::move(initialization1)),
+        initialization2(std::move(initialization2)),
+        initialization3(std::move(initialization3)),
+        condition(std::move(condition)),
+        updating(std::move(updating)) {  }
+
+void ast::ForExpression::provideInfo(ast::ProgramInfo& programInfo) const {
+    mainVariable.provideInfo(programInfo);
+    programInfo.forLoopsVariables.push_back(mainVariable.getPrintableName());
+    initialization1->provideInfo(programInfo);
+    initialization2->provideInfo(programInfo);
+    initialization3->provideInfo(programInfo);
+    condition->provideInfo(programInfo);
+    updating->provideInfo(programInfo);
+}
+
+void ast::ForExpression::print(std::ostream& stream) const {
+    stream << "for (";
+    initialization1->print(stream);
+    stream << ", ";
+    initialization2->print(stream);
+    stream << ", ";
+    initialization3->print(stream);
+    stream << "; ";
+    condition->print(stream);
+    stream << "; ";
+    updating->print(stream);
+    stream << ") {";
+}
+
+ast::NextExpression::NextExpression():
+        Expression(gw::VOID),
+        variable("", gw::INT_REF) { }
+
+ast::NextExpression::NextExpression(ast::VariableExpression variable):
+        Expression(gw::VOID),
+        variable(std::move(variable)) { }
+
+void ast::NextExpression::provideInfo(ast::ProgramInfo& programInfo) const {
+    variable.provideInfo(programInfo);
+    if (programInfo.forLoopsVariables.empty()) {
+        throw std::invalid_argument("Expected FOR before NEXT");
+    }
+    if (!variable.name.empty() && programInfo.forLoopsVariables.back() != variable.getPrintableName()) {
+        throw std::invalid_argument("Unexpected variable after NEXT");
+    }
+    programInfo.forLoopsVariables.pop_back();
+    if (!variable.name.empty()) {
+        variable.provideInfo(programInfo);
+    }
+}
+
+void ast::NextExpression::print(std::ostream& stream) const {
+    stream << "}";
+}

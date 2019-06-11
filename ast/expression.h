@@ -161,4 +161,31 @@ namespace ast {
         void provideInfo(ProgramInfo& programInfo) const override;
         void print(std::ostream& stream) const override;
     };
+
+    class ForExpression: public Expression {
+    public:
+        const VariableExpression mainVariable;
+        const std::unique_ptr<Expression> initialization1;
+        const std::unique_ptr<Expression> initialization2;
+        const std::unique_ptr<Expression> initialization3;
+        const std::unique_ptr<Expression> condition;
+        const std::unique_ptr<Expression> updating;
+        ForExpression(VariableExpression mainVariable,
+                      std::unique_ptr<Expression> initialization1,
+                      std::unique_ptr<Expression> initialization2,
+                      std::unique_ptr<Expression> initialization3,
+                      std::unique_ptr<Expression> condition,
+                      std::unique_ptr<Expression> updating);
+        void provideInfo(ProgramInfo& programInfo) const override;
+        void print(std::ostream& stream) const override;
+    };
+
+    class NextExpression: public Expression {
+    public:
+        const VariableExpression variable;
+        NextExpression();
+        explicit NextExpression(VariableExpression variable);
+        void provideInfo(ProgramInfo& programInfo) const override;
+        void print(std::ostream& stream) const override;
+    };
 }

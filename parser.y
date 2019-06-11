@@ -10,6 +10,7 @@
 extern int yylex(void);
 extern int yylineno;
 void yyerror(const char *s, ...);
+extern int yy_utilityVariablesCount;
 }
 
 %union {
@@ -33,7 +34,7 @@ void yyerror(const char *s, ...);
 %token LET_KEYWORD DIM_KEYWORD TRON_KEYWORD TROFF_KEYWORD PRINT_KEYWORD LINE_INPUT_KEYWORD INPUT_KEYWORD
 %token IF_KEYWORD THEN_KEYWORD ELSE_KEYWORD ON_KEYWORD GOTO_KEYWORD WHILE_KEYWORD WEND_KEYWORD
 %token SWAP_KEYWORD STOP_KEYWORD END_KEYWORD RANDOMIZE_KEYWORD RND_KEYWORD MID_KEYWORD ERASE_KEYWORD
-%token WRITE_KEYWORD
+%token WRITE_KEYWORD FOR_KEYWORD TO_KEYWORD STEP_KEYWORD NEXT_KEYWORD
 %token MOD_OPERATOR
 %token EQUAL_OPERATOR UNEQUAL_OPERATOR LESS_OPERATOR GREATER_OPERATOR LESS_EQUAL_OPERATOR GREATER_EQUAL_OPERATOR
 %token NOT_OPERATOR AND_OPERATOR OR_OPERATOR XOR_OPERATOR EQV_OPERATOR IMP_OPERATOR
@@ -48,11 +49,11 @@ void yyerror(const char *s, ...);
 %type <expressions> STATEMENT_LIST NOT_EMPTY_STATEMENT_LIST THEN_STATEMENTS ELSE_STATEMENTS
 %type <expressions> STATEMENT_SUBLIST DIM_LIST ERASE_LIST
 %type <exp> EXP STATEMENT
-%type <expressions> EXP_LIST NOT_EMPTY_EXP_LIST
+%type <expressions> EXP_LIST NOT_EMPTY_EXP_LIST NEXT_LIST NOT_EMPTY_NEXT_LIST
 %type <exp> LVALUE
 %type <expressions> LVALUE_LIST
 %type <printExp> PRINT_LIST WRITE_LIST
-%type <exp> OPTIONAL_INPUT_PROMPT_STRING OPTIONAL_LINE_INPUT_PROMPT_STRING
+%type <exp> OPTIONAL_INPUT_PROMPT_STRING OPTIONAL_LINE_INPUT_PROMPT_STRING OPTIONAL_STEP
 
 %nonassoc LOWER_THAN_ELSE_AND_COLON
 %nonassoc ELSE_KEYWORD
@@ -183,6 +184,18 @@ ERASE_LIST:
     ERASE_KEYWORD VARIABLE                  { $$ = ph::newExpressionVector(new ast::VectorEraseExpression(ph::unwrap($2))); }
 |   ERASE_LIST ',' VARIABLE                 { $$ = $1; $$->emplace_back(new ast::VectorEraseExpression(ph::unwrap($3))); }
 
+OPTIONAL_STEP:
+    %empty            { $$ = new ast::IntConstExpression(1); }
+|   STEP_KEYWORD EXP  { $$ = $2; }
+
+NEXT_LIST:
+    NEXT_KEYWORD                                { $$ = ph::newExpressionVector(new ast::NextExpression()); }
+|   NOT_EMPTY_NEXT_LIST %prec LOWER_THAN_COMMA  { $$ = $1; }
+
+NOT_EMPTY_NEXT_LIST:
+    NEXT_KEYWORD VARIABLE             { $$ = ph::newExpressionVector(new ast::NextExpression(ph::unwrap($2))); }
+|   NOT_EMPTY_NEXT_LIST ',' VARIABLE  { $$ = $1; $$->emplace_back(new ast::NextExpression(ph::unwrap($3))); }
+
 EXP:
     NUM_CONST                  { $$ = $1; }
 |   LINE_NUMBER                { if ($1 < 32768) $$ = new ast::IntConstExpression($1); else $$ = new ast::FloatConstExpression($1); }
@@ -235,7 +248,9 @@ STATEMENT:
 |   RANDOMIZE_KEYWORD EXP                           { $$ = ph::asFunction("randomize", {$2}); }
 |   MID_KEYWORD '(' LVALUE ',' EXP ',' EXP ')' EQUAL_OPERATOR EXP  { $$ = ph::asFunction("mid$", {$3, $5, $7, $10}); }
 |   MID_KEYWORD '(' LVALUE ',' EXP ')' EQUAL_OPERATOR EXP          { $$ = ph::asFunction("mid$", {$3, $5, new ast::IntConstExpression(255), $8}); }
+|   FOR_KEYWORD VARIABLE EQUAL_OPERATOR EXP TO_KEYWORD EXP OPTIONAL_STEP  { $$ = ph::newForExpression($2, $4, $6, $7, yy_utilityVariablesCount); }
 
 STATEMENT_SUBLIST:
     DIM_LIST    { $$ = $1; } %prec LOWER_THAN_COMMA
 |   ERASE_LIST  { $$ = $1; } %prec LOWER_THAN_COMMA
+|   NEXT_LIST   { $$ = $1; } %prec LOWER_THAN_COMMA

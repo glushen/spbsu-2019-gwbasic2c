@@ -17,6 +17,7 @@ namespace ast {
         std::set<const gw::logic::File*> logicFiles;
         std::set<int> requiredLineNumbers;
         int openedWhileLoopsCount = 0;
+        std::vector<std::string> forLoopsVariables;
     };
 
     class Node {

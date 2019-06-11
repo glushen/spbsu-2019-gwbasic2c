@@ -21,5 +21,7 @@ namespace ph {
 
     std::unique_ptr<ast::Expression> intoUniquePtr(ast::Expression* expression);
 
+    ast::ForExpression* newForExpression(ast::VariableExpression* variable, ast::Expression* initValue, ast::Expression* finalValue, ast::Expression* stepValue, int& utilityVariablesCount);
+
     void handleResult(std::vector<ast::Line> lines);
 }
