@@ -296,16 +296,6 @@ std::vector<std::unique_ptr<ast::Expression>> ast::castOrThrow(std::vector<std::
     return expressions;
 }
 
-std::unique_ptr<ast::Expression> ast::convertToString(std::unique_ptr<ast::Expression> expression) {
-    if (expression->type == gw::STRING || expression->type == gw::STRING_REF) {
-        return std::make_unique<CastedExpression>(std::move(expression), gw::STRING);
-    } else {
-        std::vector<std::unique_ptr<Expression>> arguments;
-        arguments.push_back(move(expression));
-        return ast::asFunction("str$", move(arguments));
-    }
-}
-
 ast::PrintExpression::PrintExpression():
         Expression(gw::VOID),
         newLineExpression("\n") { }
@@ -335,7 +325,22 @@ void ast::PrintExpression::print(std::ostream& stream) const {
 }
 
 void ast::PrintExpression::addExpression(std::unique_ptr<ast::Expression> expression) {
-    expressions.push_back(convertToString(move(expression)));
+    if (isWriteExpression && !expressions.empty()) {
+        expressions.emplace_back(new ast::StringConstExpression(","));
+    }
+    if (expression->type == gw::STRING || expression->type == gw::STRING_REF) {
+        if (isWriteExpression) {
+            expressions.emplace_back(new ast::StringConstExpression("\""));
+        }
+        expressions.emplace_back(new ast::CastedExpression(std::move(expression), gw::STRING));
+        if (isWriteExpression) {
+            expressions.emplace_back(new ast::StringConstExpression("\""));
+        }
+    } else {
+        std::vector<std::unique_ptr<Expression>> arguments;
+        arguments.push_back(std::move(expression));
+        expressions.push_back(ast::asFunction("str$", std::move(arguments)));
+    }
 }
 
 ast::InputExpression::InputExpression(std::unique_ptr<Expression> prompt, std::vector<std::unique_ptr<ast::Expression>> expressions):

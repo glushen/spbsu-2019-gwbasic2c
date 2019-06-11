@@ -97,11 +97,11 @@ namespace ast {
     bool castableExplicitly(gw::Type sourceType, gw::Type targetType);
     std::unique_ptr<Expression> castOrThrow(std::unique_ptr<Expression> expression, gw::Type targetType);
     std::vector<std::unique_ptr<Expression>> castOrThrow(std::vector<std::unique_ptr<Expression>> expressions, gw::Type targetType);
-    std::unique_ptr<Expression> convertToString(std::unique_ptr<Expression> expression);
 
     class PrintExpression: public Expression {
     public:
         bool printNewLine = true;
+        bool isWriteExpression = false;
         PrintExpression();
         void provideInfo(ProgramInfo& programInfo) const override;
         void print(std::ostream& stream) const override;

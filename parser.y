@@ -33,6 +33,7 @@ void yyerror(const char *s, ...);
 %token LET_KEYWORD DIM_KEYWORD TRON_KEYWORD TROFF_KEYWORD PRINT_KEYWORD LINE_INPUT_KEYWORD INPUT_KEYWORD
 %token IF_KEYWORD THEN_KEYWORD ELSE_KEYWORD ON_KEYWORD GOTO_KEYWORD WHILE_KEYWORD WEND_KEYWORD
 %token SWAP_KEYWORD STOP_KEYWORD END_KEYWORD RANDOMIZE_KEYWORD RND_KEYWORD MID_KEYWORD ERASE_KEYWORD
+%token WRITE_KEYWORD
 %token MOD_OPERATOR
 %token EQUAL_OPERATOR UNEQUAL_OPERATOR LESS_OPERATOR GREATER_OPERATOR LESS_EQUAL_OPERATOR GREATER_EQUAL_OPERATOR
 %token NOT_OPERATOR AND_OPERATOR OR_OPERATOR XOR_OPERATOR EQV_OPERATOR IMP_OPERATOR
@@ -50,7 +51,7 @@ void yyerror(const char *s, ...);
 %type <expressions> EXP_LIST NOT_EMPTY_EXP_LIST
 %type <exp> LVALUE
 %type <expressions> LVALUE_LIST
-%type <printExp> PRINT_LIST
+%type <printExp> PRINT_LIST WRITE_LIST
 %type <exp> OPTIONAL_INPUT_PROMPT_STRING OPTIONAL_LINE_INPUT_PROMPT_STRING
 
 %nonassoc LOWER_THAN_ELSE_AND_COLON
@@ -113,6 +114,10 @@ OPTIONAL_LET_KEYWORD:
     %empty
 |   LET_KEYWORD
 
+COMMA_OR_SEMICOLON:
+    ','
+|   ';'
+
 EXP_LIST:
     %empty              { $$ = ph::newExpressionVector(); }
 |   NOT_EMPTY_EXP_LIST  { $$ = $1; }
@@ -134,6 +139,10 @@ PRINT_LIST:
 |   PRINT_LIST EXP %prec LOWER_THAN_MINUS  { $$ = $1; $$->addExpression(ph::intoUniquePtr($2)); $$->printNewLine = true; }
 |   PRINT_LIST ';'                         { $$ = $1; $$->printNewLine = false; }
 |   PRINT_LIST ','                         { $$ = $1; $$->addExpression(std::make_unique<ast::StringConstExpression>("    ")); $$->printNewLine = false; }
+
+WRITE_LIST:
+    EXP                                    { $$ = new ast::PrintExpression(); $$->isWriteExpression = true; $$->addExpression(ph::intoUniquePtr($1)); }
+|   WRITE_LIST COMMA_OR_SEMICOLON EXP      { $$ = $1; $$->addExpression(ph::intoUniquePtr($3)); }
 
 OPTIONAL_SEMICOLON:
     %empty
@@ -207,10 +216,11 @@ EXP:
 |   MID_KEYWORD '(' EXP ',' EXP ')'           { $$ = ph::asFunction("mid$", {$3, $5, new ast::IntConstExpression(255)}); }
 
 STATEMENT:
-    OPTIONAL_LET_KEYWORD LVALUE EQUAL_OPERATOR EXP  { $$ = ph::asFunction("let", {$2, $4}); }
-|   TRON_KEYWORD                                    { $$ = ph::asFunction("tron", {}); }
-|   TROFF_KEYWORD                                   { $$ = ph::asFunction("troff", {}); }
-|   PRINT_KEYWORD PRINT_LIST                        { $$ = $2; }
+    OPTIONAL_LET_KEYWORD LVALUE EQUAL_OPERATOR EXP   { $$ = ph::asFunction("let", {$2, $4}); }
+|   TRON_KEYWORD                                     { $$ = ph::asFunction("tron", {}); }
+|   TROFF_KEYWORD                                    { $$ = ph::asFunction("troff", {}); }
+|   PRINT_KEYWORD PRINT_LIST                         { $$ = $2; }
+|   WRITE_KEYWORD WRITE_LIST %prec LOWER_THAN_COMMA  { $$ = $2; }
 |   LINE_INPUT_KEYWORD OPTIONAL_SEMICOLON OPTIONAL_LINE_INPUT_PROMPT_STRING LVALUE  { $$ = ph::asFunction("lineinput", {$3, $4}); }
 |   INPUT_KEYWORD OPTIONAL_SEMICOLON OPTIONAL_INPUT_PROMPT_STRING LVALUE_LIST %prec LOWER_THAN_COMMA  { $$ = new ast::InputExpression(ph::intoUniquePtr($3), ph::unwrap($4)); }
 |   GOTO_KEYWORD LINE_NUMBER                        { $$ = new ast::GotoExpression($2); }
